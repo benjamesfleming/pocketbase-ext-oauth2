@@ -6,16 +6,14 @@ import (
 	"net/http"
 
 	"github.com/go-jose/go-jose/v3"
-	"github.com/google/uuid"
+	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 type RFC7591ClientStorage interface {
-	// GetHashedClientMetadata returns the client metadata for the given client ID.
-	GetHashedClientMetadata(ctx context.Context, id string) (*RFC7591ClientMetadata, error)
 	// RegisterClient registers a new client with the given metadata
 	// and returns the created client or an error if the registration failed.
-	RegisterClient(ctx context.Context, client *RFC7591ClientMetadata) error
+	RegisterClient(ctx context.Context, client *RFC7591ClientMetadataRequest) (fosite.Client, string, error)
 }
 
 type RFC7591ClientMetadataRequest struct {
@@ -69,22 +67,18 @@ func api_OAuth2Register(e *core.RequestEvent) error {
 
 	//
 
-	resp := &RFC7591ClientMetadata{
-		RFC7591ClientMetadataRequest: md,
-		ClientID:                     uuid.New().String(),
-		ClientSecret:                 uuid.New().String(),
-		ClientSecretExpiresAt:        0,
+	c, clientSecret, err := GetOAuth2Store().RegisterClient(r.Context(), &md)
+	if err != nil {
+		return e.InternalServerError("", err)
 	}
-
-	resp.TokenEndpointAuthMethod = "client_secret_post"
-	resp.ResponseTypes = []string{"code"}
-	resp.GrantTypes = []string{"authorization_code", "refresh_token"}
 
 	//
 
-	err := GetOAuth2Store().RegisterClient(r.Context(), resp)
-	if err != nil {
-		return e.InternalServerError("", err)
+	resp := &RFC7591ClientMetadata{
+		RFC7591ClientMetadataRequest: md,
+		ClientID:                     c.GetID(),
+		ClientSecret:                 clientSecret,
+		ClientSecretExpiresAt:        0,
 	}
 
 	//

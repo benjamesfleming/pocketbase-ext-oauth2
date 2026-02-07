@@ -11,6 +11,7 @@ import (
 
 	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/client"
 )
 
 func api_OAuth2Authorize(e *core.RequestEvent) error {
@@ -44,12 +45,12 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 		}
 	}
 	if u == nil {
-		client, _ := GetOAuth2Store().GetHashedClientMetadata(ctx, ar.GetClient().GetID())
+		c, _ := ar.GetClient().(*client.Client)
 		state := map[string]interface{}{
 			"collection":       GetOAuth2Config().DefaultUserCollection,
-			"client_id":        client.ClientID,
-			"client_name":      client.ClientName,
-			"client_uri":       client.ClientURI,
+			"client_id":        c.ID,
+			"client_name":      c.Name,
+			"client_uri":       c.ClientURI,
 			"requested_scopes": ar.GetRequestedScopes(),
 			"redirect_uri":     e.App.Settings().Meta.AppURL + r.RequestURI,
 		}

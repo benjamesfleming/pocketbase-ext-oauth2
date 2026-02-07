@@ -117,6 +117,25 @@ func Register(app core.App, config *Config) error {
 		)(oauth2GlobalCfg, se.Router)
 		return se.Next()
 	})
+
+	app.OnModelCreate(consts.ClientCollectionName).BindFunc(func(e *core.ModelEvent) error {
+		if record, ok := e.Model.(*core.Record); ok {
+			e.App.Logger().Info(
+				"[Plugin/OAuth2] New client registered",
+				slog.Any("client_id", record.GetString("client_id")),
+				slog.Any("client_name", record.GetString("client_name")),
+			)
+
+			h, _ := GetOAuth2Config().GetSecretsHasher(context.Background()).Hash(
+				e.Context,
+				[]byte(record.GetString("client_secret")),
+			)
+			record.Set("client_secret", string(h))
+		}
+		log.Printf("%+T", e.Model)
+		return e.Next()
+	})
+
 	return nil
 }
 

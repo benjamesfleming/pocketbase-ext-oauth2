@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/ory/fosite"
@@ -32,42 +31,26 @@ func NewOAuth2Store(app core.App) *OAuth2Store {
 
 // GetClient implements [fosite.ClientManager].
 func (s *OAuth2Store) GetClient(ctx context.Context, id string) (fosite.Client, error) {
-	metadata, err := s.GetHashedClientMetadata(ctx, id)
+	m := &ClientModel{}
+	c, err := s.app.FindCachedCollectionByNameOrId(consts.ClientCollectionName)
 	if err != nil {
-		return nil, err
+		c = core.NewBaseCollection("@__invalid__")
 	}
-
-	return &fosite.DefaultOpenIDConnectClient{
-		DefaultClient: &fosite.DefaultClient{
-			ID:            metadata.ClientID,
-			Secret:        []byte(metadata.ClientSecret),
-			RedirectURIs:  metadata.RedirectURIs,
-			ResponseTypes: metadata.ResponseTypes,
-			GrantTypes:    metadata.GrantTypes,
-			Scopes:        strings.Split(metadata.Scope, " "),
-		},
-		TokenEndpointAuthMethod: metadata.TokenEndpointAuthMethod,
-	}, nil
-}
-
-// GetHashedClientMetadata implements [RFC7591ClientStorage].
-func (s *OAuth2Store) GetHashedClientMetadata(ctx context.Context, id string) (*RFC7591ClientMetadata, error) {
-	var md RFC7591ClientMetadataModel
-	err := s.app.RecordQuery(consts.ClientCollectionName).
+	err = s.app.RecordQuery(c).
 		AndWhere(dbx.HashExp{"client_id": id}).
-		One(&md)
+		One(m)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fosite.ErrNotFound
+		}
 		return nil, err
 	}
-	return md.ToHashedMetadata()
+	return m.ToClient()
 }
 
 // RegisterClient implements [RFC7591ClientStorage].
-func (s *OAuth2Store) RegisterClient(ctx context.Context, client *RFC7591ClientMetadata) error {
-	md := NewRFC7591ClientMetadataModel(s.app)
-	md.SetMetadata(client, GetOAuth2Config().GetSecretsHasher(ctx))
-
-	return s.app.Save(md)
+func (s *OAuth2Store) RegisterClient(ctx context.Context, client *RFC7591ClientMetadataRequest) (fosite.Client, string, error) {
+	return NewClientFromRFC7591Metadata(s.app, client)
 }
 
 // ClientAssertionJWTValid implements [fosite.ClientManager].
