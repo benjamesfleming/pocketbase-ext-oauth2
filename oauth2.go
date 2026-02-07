@@ -2,7 +2,9 @@ package oauth2
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"time"
@@ -156,7 +158,7 @@ func bindOAuth2WellKnownHandlers(md1 *rfc8414.AuthorizationServerMetadata) func(
 		// Authorization Server Metadata
 		// @ref https://datatracker.ietf.org/doc/html/rfc8414
 		if md1 != nil {
-			r.GET("/.well-known/oauth-authorization-server", rfc8414.HandleAuthorizationServerMetadata(md1))
+			r.GET("/.well-known/oauth-authorization-server", handleJSON(md1))
 		}
 		// rfc9728
 		// Protected Resource Metadata
@@ -172,12 +174,37 @@ func bindOAuth2WellKnownHandlers(md1 *rfc8414.AuthorizationServerMetadata) func(
 				key := "/" + strings.Trim(e.Request.PathValue("resource"), "/")
 
 				if md, ok := oauth2ProtectedResourceMetadata[key]; ok {
-					return rfc9728.HandleProtectedResourceMetadata(md)(e)
+					return handleJSON(md)(e)
 				} else {
 					return e.NotFoundError("Unknown Protected Resource", nil)
 				}
 			})
 		}
+	}
+}
+
+func handleJSON(data any) func(e *core.RequestEvent) error {
+	return func(e *core.RequestEvent) error {
+		r := e.Request
+		w := e.Response
+		// Set CORS headers for cross-origin client discovery.
+		// OAuth metadata is public information, so allowing any origin is safe.
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		// Handle CORS preflight requests
+		if r.Method == http.MethodOptions {
+			return e.NoContent(http.StatusNoContent)
+		}
+		// Only GET allowed for metadata retrieval
+		if r.Method != http.MethodGet {
+			return e.Error(http.StatusMethodNotAllowed, "", nil)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		if err := json.NewEncoder(w).Encode(data); err != nil {
+			return e.InternalServerError("", err)
+		}
+		return nil
 	}
 }
 
