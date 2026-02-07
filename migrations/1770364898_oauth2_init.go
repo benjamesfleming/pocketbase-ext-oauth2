@@ -10,6 +10,7 @@ var sessionCollections = []string{
 	consts.RefreshCollectionName,
 	consts.AuthCodeCollectionName,
 	consts.PKCECollectionName,
+	consts.OpenIDConnectCollectionName,
 }
 
 func init() {

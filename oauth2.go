@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync"
@@ -14,7 +16,9 @@ import (
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 	_ "github.com/pocketbase/pocketbase/plugins/oauth2/migrations"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/openid"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc8414"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc9728"
 	"github.com/pocketbase/pocketbase/tools/hook"
@@ -97,6 +101,11 @@ func Register(app core.App, config *Config) error {
 		compose.OAuth2TokenIntrospectionFactory,
 		compose.OAuth2TokenRevocationFactory,
 		compose.OAuth2PKCEFactory,
+
+		compose.OpenIDConnectExplicitFactory,
+		compose.OpenIDConnectImplicitFactory,
+		compose.OpenIDConnectHybridFactory,
+		compose.OpenIDConnectRefreshFactory,
 	)
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
@@ -105,12 +114,16 @@ func Register(app core.App, config *Config) error {
 		// route handlers
 		bindOAuth2Handlers(oauth2GlobalCfg, se.Router)
 		bindOAuth2WellKnownHandlers(
-			&rfc8414.AuthorizationServerMetadata{
-				Issuer:                 app.Settings().Meta.AppURL,
-				AuthzEndpoint:          app.Settings().Meta.AppURL + config.PathPrefix + "/auth",
-				TokenEndpoint:          app.Settings().Meta.AppURL + config.PathPrefix + "/token",
-				RegistrationEndpoint:   app.Settings().Meta.AppURL + config.PathPrefix + "/register",
-				ResponseTypesSupported: []string{"code"},
+			&openid.OpenIDProviderMetadata{
+				AuthorizationServerMetadata: rfc8414.AuthorizationServerMetadata{
+					Issuer:                 app.Settings().Meta.AppURL,
+					AuthzEndpoint:          app.Settings().Meta.AppURL + config.PathPrefix + "/auth",
+					TokenEndpoint:          app.Settings().Meta.AppURL + config.PathPrefix + "/token",
+					RegistrationEndpoint:   app.Settings().Meta.AppURL + config.PathPrefix + "/register",
+					ResponseTypesSupported: []string{"code", "id_token", "id_token token"},
+				},
+				UserInfoEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/userinfo",
+				JwksURI:          app.Settings().Meta.AppURL + "/.well-known/openid-configuration/jwks",
 			},
 		)(oauth2GlobalCfg, se.Router)
 		return se.Next()
@@ -169,13 +182,15 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	}
 }
 
-func bindOAuth2WellKnownHandlers(md1 *rfc8414.AuthorizationServerMetadata) func(cfg *Config, r *router.Router[*core.RequestEvent]) {
+func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	return func(cfg *Config, r *router.Router[*core.RequestEvent]) {
 		// rfc8414
 		// Authorization Server Metadata
 		// @ref https://datatracker.ietf.org/doc/html/rfc8414
+		// @ref https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 		if md1 != nil {
-			r.GET("/.well-known/oauth-authorization-server", handleJSON(md1))
+			r.GET("/.well-known/oauth-authorization-server", handleJSON(md1.AuthorizationServerMetadata))
+			r.GET("/.well-known/openid-configuration", handleJSON(md1))
 		}
 		// rfc9728
 		// Protected Resource Metadata

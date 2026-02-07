@@ -8,6 +8,7 @@ import (
 
 	"github.com/ory/fosite"
 	fositeoauth2 "github.com/ory/fosite/handler/oauth2"
+	fositeopenid "github.com/ory/fosite/handler/openid"
 	fositepkce "github.com/ory/fosite/handler/pkce"
 
 	"github.com/pocketbase/dbx"
@@ -177,12 +178,40 @@ func (s *OAuth2Store) GetPKCERequestSession(ctx context.Context, signature strin
 	return m.ToRequest(ctx, s, session)
 }
 
+// CreateOpenIDConnectSession implements [openid.OpenIDConnectRequestStorage].
+func (s *OAuth2Store) CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error {
+	m := newSessionModel(s.app, &OpenIDConnectSessionModel{})
+	m.SetSignature(authorizeCode)
+	m.SetRequester(requester)
+
+	return s.app.Save(m)
+}
+
+// DeleteOpenIDConnectSession implements [openid.OpenIDConnectRequestStorage].
+func (s *OAuth2Store) DeleteOpenIDConnectSession(ctx context.Context, authorizeCode string) error {
+	return deleteSessionModelBySignature(s.app, &OpenIDConnectSessionModel{}, authorizeCode)
+}
+
+// GetOpenIDConnectSession implements [openid.OpenIDConnectRequestStorage].
+func (s *OAuth2Store) GetOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) (fosite.Requester, error) {
+	m, err := findSessionModelBySignature(s.app, &OpenIDConnectSessionModel{}, authorizeCode)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fositeopenid.ErrNoSessionFound
+		}
+		return nil, err
+	}
+
+	return m.ToRequest(ctx, s, requester.GetSession())
+}
+
 var _ fosite.Storage = (*OAuth2Store)(nil)
 var _ fositeoauth2.AuthorizeCodeStorage = (*OAuth2Store)(nil)
 var _ fositeoauth2.AccessTokenStorage = (*OAuth2Store)(nil)
 var _ fositeoauth2.RefreshTokenStorage = (*OAuth2Store)(nil)
 var _ fositeoauth2.TokenRevocationStorage = (*OAuth2Store)(nil)
 var _ fositepkce.PKCERequestStorage = (*OAuth2Store)(nil)
+var _ fositeopenid.OpenIDConnectRequestStorage = (*OAuth2Store)(nil)
 var _ RFC7591ClientStorage = (*OAuth2Store)(nil)
 
 // HELPER FUNCTIONS

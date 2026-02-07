@@ -5,9 +5,10 @@ package consts
 // models and migration code, which both need to reference the collection names.
 
 const (
-	ClientCollectionName   = "_oauth2Clients"
-	AuthCodeCollectionName = "_oauth2AuthCode"
-	AccessCollectionName   = "_oauth2Access"
-	RefreshCollectionName  = "_oauth2Refresh"
-	PKCECollectionName     = "_oauth2PKCE"
+	ClientCollectionName        = "_oauth2Clients"
+	AuthCodeCollectionName      = "_oauth2AuthCode"
+	AccessCollectionName        = "_oauth2Access"
+	RefreshCollectionName       = "_oauth2Refresh"
+	PKCECollectionName          = "_oauth2PKCE"
+	OpenIDConnectCollectionName = "_oauth2OpenID"
 )

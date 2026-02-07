@@ -185,7 +185,18 @@ func (p *PKCEModel) GetCollectionName() string {
 	return consts.PKCECollectionName
 }
 
+// OPENID
+
+type OpenIDConnectSessionModel struct {
+	BaseSessionModel
+}
+
+func (p *OpenIDConnectSessionModel) GetCollectionName() string {
+	return consts.OpenIDConnectCollectionName
+}
+
 var _ SessionModel = (*AuthCodeModel)(nil)
 var _ SessionModel = (*AccessTokenModel)(nil)
 var _ SessionModel = (*RefreshTokenModel)(nil)
 var _ SessionModel = (*PKCEModel)(nil)
+var _ SessionModel = (*OpenIDConnectSessionModel)(nil)
