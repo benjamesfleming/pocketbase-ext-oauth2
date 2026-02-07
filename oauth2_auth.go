@@ -23,7 +23,8 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	ar, err := oauth2.NewAuthorizeRequest(ctx, r)
 	if err != nil {
 		e.App.Logger().Info("[Plugin/OAuth2] Error occurred in NewAuthorizeRequest", slog.Any("error", err))
-		if rfc6749err, ok := err.(*fosite.RFC6749Error); ok {
+		var rfc6749err *fosite.RFC6749Error
+		if errors.As(err, &rfc6749err) {
 			e.App.Logger().Debug(fmt.Sprintf("[Plugin/OAuth2] %s", rfc6749err.DebugField))
 			e.App.Logger().Debug(fmt.Sprintf("[Plugin/OAuth2] %+v", rfc6749err.StackTrace()))
 		}
@@ -109,7 +110,8 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	// * ...
 	if err != nil {
 		e.App.Logger().Info("[Plugin/OAuth2] Error occurred in NewAuthorizeResponse", slog.Any("error", err))
-		if rfc6749err, ok := err.(*fosite.RFC6749Error); ok {
+		var rfc6749err *fosite.RFC6749Error
+		if errors.As(err, &rfc6749err) {
 			e.App.Logger().Debug(fmt.Sprintf("[Plugin/OAuth2] %s", rfc6749err.DebugField))
 			e.App.Logger().Debug(fmt.Sprintf("[Plugin/OAuth2] %+v", rfc6749err.StackTrace()))
 		}
