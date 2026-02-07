@@ -9,6 +9,7 @@ import (
 
 	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
 type SessionModel interface {
@@ -144,13 +145,6 @@ func (m BaseSessionModel) GetSubject() string {
 
 //
 
-const (
-	AuthCodeCollectionName = "_oauth2AuthCode"
-	AccessCollectionName   = "_oauth2Access"
-	RefreshCollectionName  = "_oauth2Refresh"
-	PKCECollectionName     = "_oauth2PKCE"
-)
-
 // AuthCode
 
 type AuthCodeModel struct {
@@ -158,7 +152,7 @@ type AuthCodeModel struct {
 }
 
 func (p *AuthCodeModel) GetCollectionName() string {
-	return AuthCodeCollectionName
+	return consts.AuthCodeCollectionName
 }
 
 // AccessToken
@@ -168,7 +162,7 @@ type AccessTokenModel struct {
 }
 
 func (p *AccessTokenModel) GetCollectionName() string {
-	return AccessCollectionName
+	return consts.AccessCollectionName
 }
 
 // RefreshToken
@@ -178,7 +172,7 @@ type RefreshTokenModel struct {
 }
 
 func (p *RefreshTokenModel) GetCollectionName() string {
-	return RefreshCollectionName
+	return consts.RefreshCollectionName
 }
 
 // PKCE
@@ -188,7 +182,7 @@ type PKCEModel struct {
 }
 
 func (p *PKCEModel) GetCollectionName() string {
-	return PKCECollectionName
+	return consts.PKCECollectionName
 }
 
 var _ SessionModel = (*AuthCodeModel)(nil)

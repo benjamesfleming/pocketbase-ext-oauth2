@@ -6,11 +6,10 @@ import (
 	"github.com/ory/fosite"
 	"github.com/pkg/errors"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
-const (
-	ClientCollectionName = "_oauth2Clients"
-)
+const ()
 
 type RFC7591ClientMetadataModel struct {
 	core.BaseRecordProxy
@@ -18,7 +17,7 @@ type RFC7591ClientMetadataModel struct {
 
 func NewRFC7591ClientMetadataModel(app core.App) *RFC7591ClientMetadataModel {
 	m := &RFC7591ClientMetadataModel{}
-	c, err := app.FindCachedCollectionByNameOrId(ClientCollectionName)
+	c, err := app.FindCachedCollectionByNameOrId(consts.ClientCollectionName)
 	if err != nil {
 		c = core.NewBaseCollection("@__invalid__")
 	}

@@ -14,6 +14,7 @@ import (
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
+	_ "github.com/pocketbase/pocketbase/plugins/oauth2/migrations"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc8414"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc9728"
 	"github.com/pocketbase/pocketbase/tools/hook"

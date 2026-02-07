@@ -2,14 +2,14 @@ package migrations
 
 import (
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/oauth2"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
 var sessionCollections = []string{
-	oauth2.AccessCollectionName,
-	oauth2.RefreshCollectionName,
-	oauth2.AuthCodeCollectionName,
-	oauth2.PKCECollectionName,
+	consts.AccessCollectionName,
+	consts.RefreshCollectionName,
+	consts.AuthCodeCollectionName,
+	consts.PKCECollectionName,
 }
 
 func init() {
@@ -25,7 +25,7 @@ func init() {
 
 		// RFC 7591 Client Metadata Collection
 
-		collection := core.NewBaseCollection(oauth2.ClientCollectionName)
+		collection := core.NewBaseCollection(consts.ClientCollectionName)
 		collection.System = true
 		collection.Fields.Add(
 			&core.TextField{Name: "client_id"},
@@ -54,7 +54,7 @@ func init() {
 				_ = txApp.Delete(collection)
 			}
 		}
-		if collection, err := txApp.FindCollectionByNameOrId(oauth2.ClientCollectionName); err == nil {
+		if collection, err := txApp.FindCollectionByNameOrId(consts.ClientCollectionName); err == nil {
 			_ = txApp.Delete(collection)
 		}
 		return nil

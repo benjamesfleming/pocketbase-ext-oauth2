@@ -13,6 +13,7 @@ import (
 
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
+	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
 //
@@ -52,7 +53,7 @@ func (s *OAuth2Store) GetClient(ctx context.Context, id string) (fosite.Client, 
 // GetHashedClientMetadata implements [RFC7591ClientStorage].
 func (s *OAuth2Store) GetHashedClientMetadata(ctx context.Context, id string) (*RFC7591ClientMetadata, error) {
 	var md RFC7591ClientMetadataModel
-	err := s.app.RecordQuery(ClientCollectionName).
+	err := s.app.RecordQuery(consts.ClientCollectionName).
 		AndWhere(dbx.HashExp{"client_id": id}).
 		One(&md)
 	if err != nil {
