@@ -32,6 +32,11 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 	md.ResponseTypes = []string{"code"}
 	md.GrantTypes = []string{"authorization_code", "refresh_token"}
 
+	if len(md.Scope) == 0 {
+		// Default Scopes
+		md.Scope = "openid profile mcp:read mcp:write"
+	}
+
 	if md.Contacts == nil {
 		md.Contacts = []string{}
 	}

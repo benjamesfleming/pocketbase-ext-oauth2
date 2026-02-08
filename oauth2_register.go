@@ -60,11 +60,6 @@ func api_OAuth2Register(e *core.RequestEvent) error {
 		return e.BadRequestError("redirect_uris is required", nil)
 	}
 
-	if len(md.Scope) == 0 {
-		// Default Scopes
-		md.Scope = "mcp:read mcp:write"
-	}
-
 	//
 
 	c, clientSecret, err := GetOAuth2Store().RegisterClient(r.Context(), &md)
