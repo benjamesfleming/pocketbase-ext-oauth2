@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -108,6 +107,8 @@ func Register(app core.App, config *Config) error {
 		compose.OpenIDConnectRefreshFactory,
 	)
 
+	// Attach HTTP handlers
+
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// auth middleware
 		se.Router.Bind(loadOAuth2Token())
@@ -129,23 +130,25 @@ func Register(app core.App, config *Config) error {
 		return se.Next()
 	})
 
-	app.OnModelCreate(consts.ClientCollectionName).BindFunc(func(e *core.ModelEvent) error {
-		if record, ok := e.Model.(*core.Record); ok {
+	// Attach event listeners
+
+	app.OnRecordCreate(consts.ClientCollectionName).
+		BindFunc(func(e *core.RecordEvent) error {
 			e.App.Logger().Info(
 				"[Plugin/OAuth2] New client registered",
-				slog.Any("client_id", record.GetString("client_id")),
-				slog.Any("client_name", record.GetString("client_name")),
+				slog.Any("client_id", e.Record.GetString("client_id")),
+				slog.Any("client_name", e.Record.GetString("client_name")),
 			)
 
 			h, _ := GetOAuth2Config().GetSecretsHasher(context.Background()).Hash(
 				e.Context,
-				[]byte(record.GetString("client_secret")),
+				[]byte(e.Record.GetString("client_secret")),
 			)
-			record.Set("client_secret", string(h))
-		}
-		log.Printf("%+T", e.Model)
-		return e.Next()
-	})
+			e.Record.Set("client_secret", string(h))
+			return e.Next()
+		})
+
+	//
 
 	return nil
 }
