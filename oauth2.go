@@ -13,14 +13,12 @@ import (
 	"github.com/ory/fosite/compose"
 	"github.com/ory/fosite/token/jwt"
 
-	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 	_ "github.com/pocketbase/pocketbase/plugins/oauth2/migrations"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/openid"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc8414"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc9728"
-	"github.com/pocketbase/pocketbase/tools/hook"
 	"github.com/pocketbase/pocketbase/tools/router"
 )
 
@@ -80,18 +78,12 @@ func Register(app core.App, config *Config) error {
 		oauth2GlobalCfg.BaseConfig,
 		oauth2GlobalStore,
 		compose.CommonStrategy{
-			CoreStrategy: compose.NewOAuth2JWTStrategy(
-				func(ctx context.Context) (interface{}, error) {
-					return oauth2PrivateKey, nil
-				},
-				compose.NewOAuth2HMACStrategy(oauth2GlobalCfg.BaseConfig),
-				oauth2GlobalCfg.BaseConfig,
-			),
+			CoreStrategy: NewPocketBaseStrategy(app, oauth2GlobalCfg),
 			OpenIDConnectTokenStrategy: compose.NewOpenIDConnectStrategy(
 				func(ctx context.Context) (interface{}, error) {
 					return oauth2PrivateKey, nil
 				},
-				oauth2GlobalCfg.BaseConfig,
+				oauth2GlobalCfg,
 			),
 		},
 
@@ -110,8 +102,6 @@ func Register(app core.App, config *Config) error {
 	// Attach HTTP handlers
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
-		// auth middleware
-		se.Router.Bind(loadOAuth2Token())
 		// route handlers
 		bindOAuth2Handlers(oauth2GlobalCfg, se.Router)
 		bindOAuth2WellKnownHandlers(
@@ -240,50 +230,6 @@ func handleJSON(data any) func(e *core.RequestEvent) error {
 			return e.InternalServerError("", err)
 		}
 		return nil
-	}
-}
-
-// loadOAuth2Token attempts to load the auth context based on the "Authorization: Bearer TOKEN" header value.
-//
-// This middleware does nothing in case of:
-//   - missing, invalid or expired token
-//   - e.Auth is already loaded by another middleware
-//
-// This middleware is registered by default for all routes.
-func loadOAuth2Token() *hook.Handler[*core.RequestEvent] {
-	return &hook.Handler[*core.RequestEvent]{
-		Id:       "pbLoadOAuth2Token",
-		Priority: apis.DefaultLoadAuthTokenMiddlewarePriority - 10,
-		Func: func(e *core.RequestEvent) error {
-			// already loaded by another middleware
-			if e.Auth != nil {
-				return e.Next()
-			}
-			// load from header
-			token := e.Request.Header.Get("Authorization")
-			if token != "" {
-				token = strings.TrimPrefix(token, "Bearer ")
-			}
-			if token == "" {
-				return e.Next()
-			}
-			// parse and validate the token
-			_, claims, err := ParseJWTToken(e.Request.Context(), token)
-			if err != nil {
-				return e.Next()
-			}
-			collection, ok := claims.Extra["collection"].(string)
-			if !ok {
-				return e.Next()
-			}
-			// convert claims to auth context
-			// ignore error since we want to continue even if the auth
-			// context cannot be loaded. Maybe this token is a valid
-			// non-OAuth2 token?
-			e.Auth, _ = e.App.FindRecordById(collection, claims.Subject)
-			// done
-			return e.Next()
-		},
 	}
 }
 

@@ -3,7 +3,6 @@ package oauth2
 import (
 	"time"
 
-	fositeoauth2 "github.com/ory/fosite/handler/oauth2"
 	fositeopenid "github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/pocketbase/pocketbase/core"
@@ -19,38 +18,36 @@ import (
 // Usually, you could do:
 //
 //	session = new(fosite.DefaultSession)
-func newSession(app core.App, subject string, collection string) *OpenIDJWTSession {
-	return &OpenIDJWTSession{
+func newSession(app core.App, recordId string, collectionId string) *Session {
+	return &Session{
 		DefaultSession: fositeopenid.DefaultSession{
 			Claims: &jwt.IDTokenClaims{
 				Issuer:    app.Settings().Meta.AppURL,
-				Subject:   subject,
+				Subject:   recordId,
 				IssuedAt:  time.Now(),
 				ExpiresAt: time.Now().Add(time.Hour * 6),
-				Extra: map[string]interface{}{
-					"collection": collection,
-				},
 			},
-			Headers: &jwt.Headers{},
+			Headers:  &jwt.Headers{},
+			Subject:  recordId,
+			Username: "", // TODO: Add email here?
 		},
+		CollectionId: collectionId,
 	}
 }
 
-type OpenIDJWTSession struct {
+type Session struct {
 	fositeopenid.DefaultSession
+
+	CollectionId string `json:"collection,omitempty"`
 }
 
-var _ fositeopenid.Session = (*OpenIDJWTSession)(nil)
-var _ fositeoauth2.JWTSessionContainer = (*OpenIDJWTSession)(nil)
+var _ fositeopenid.Session = (*Session)(nil)
 
-func (s *OpenIDJWTSession) GetJWTClaims() jwt.JWTClaimsContainer {
+func (s *Session) GetJWTClaims() jwt.JWTClaimsContainer {
 	claims := &jwt.JWTClaims{}
 	if s.Claims != nil {
 		claims.FromMapClaims(s.Claims.ToMapClaims())
 	}
+	claims.Add("collection", s.CollectionId)
 	return claims
-}
-
-func (s *OpenIDJWTSession) GetJWTHeader() *jwt.Headers {
-	return s.IDTokenHeaders()
 }
