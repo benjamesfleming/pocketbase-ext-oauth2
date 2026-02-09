@@ -1,106 +1,63 @@
 package oauth2
 
 import (
+	"crypto/ed25519"
 	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
-	"encoding/pem"
-	"fmt"
-	"io"
+	"database/sql"
+	"encoding/json"
 
+	"github.com/go-jose/go-jose/v3"
+	"github.com/google/uuid"
+	"github.com/pkg/errors"
 	"github.com/pocketbase/pocketbase/core"
 )
 
 const (
-	PrivateKeyFileName = "_internal/oauth2_private_key.pem"
+	paramsKeyOAuth2OpenIDKey = "oauth2_openid_key"
 )
 
-var oauth2PrivateKey *rsa.PrivateKey
+var oauth2PrivateKey *jose.JSONWebKey
 
 //
 
+// loadPrivateKeyFromAppStorage loads the private JSON-Web-Key from the app storage or generates
+// a new one if it doesn't exist. The key is used for signing the OpenID Connect ID tokens and
+// other related operations. The key is stored in the internal app _params table to ensure it
+// persists across application restarts.
 func loadPrivateKeyFromAppStorage(app core.App) error {
-	fs, err := app.NewFilesystem()
+	param := &core.Param{}
+	err := app.ModelQuery(param).Model(paramsKeyOAuth2OpenIDKey, param)
 	if err != nil {
-		return fmt.Errorf("failed to create filesystem: %w", err)
+		if !errors.Is(err, sql.ErrNoRows) {
+			return errors.Wrap(err, "failed to query db")
+		}
+		// No existing key found, generate a new Ed25519 key
+		_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return errors.Wrap(err, "failed to generate new ed25519 key")
+		}
+		// Build the JWK from the generated private key
+		oauth2PrivateKey = &jose.JSONWebKey{
+			Key:       privateKey,
+			KeyID:     uuid.NewString(),
+			Algorithm: string(jose.EdDSA),
+			Use:       "sig",
+		}
+		// Store the keys in the app storage for future use
+		newParam := &core.Param{}
+		newParam.Id = paramsKeyOAuth2OpenIDKey
+		newParam.Value, err = oauth2PrivateKey.MarshalJSON()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal ed25519 key")
+		}
+		if err := app.Save(newParam); err != nil {
+			return errors.Wrap(err, "failed to save ed25519 key")
+		}
+		return nil
 	}
-	defer fs.Close()
-
-	exists, err := fs.Exists(PrivateKeyFileName)
-	if err != nil {
-		return fmt.Errorf("failed to check if private key file exists: %w", err)
+	// Key found, decode it
+	if err := json.Unmarshal(param.Value, &oauth2PrivateKey); err != nil {
+		return errors.Wrap(err, "failed to unmarshal ed25519 key")
 	}
-
-	if !exists {
-		// Generate a new private key
-		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-		if err != nil {
-			return fmt.Errorf("failed to generate new private key: %w", err)
-		}
-		oauth2PrivateKey = privateKey
-		// Marshal the private key to DER format (PKCS#8 is a modern standard)
-		// Save the private key to the filesystem
-		keyBytes, err := encodePrivateKeyToPEMBytes(privateKey)
-		if err != nil {
-			return fmt.Errorf("failed to encode private key: %w", err)
-		}
-		if err = fs.Upload(keyBytes, PrivateKeyFileName); err != nil {
-			return fmt.Errorf("failed to save private key: %w", err)
-		}
-
-	} else {
-		r, err := fs.GetReader(PrivateKeyFileName)
-		if err != nil {
-			return fmt.Errorf("failed to read private key file: %w", err)
-		}
-		defer r.Close()
-		privateKeyBytes, err := io.ReadAll(r)
-		if err != nil {
-			return fmt.Errorf("failed to read private key: %w", err)
-		}
-		privateKey, err := decodePEMBytesToPrivateKey(privateKeyBytes)
-		if err != nil {
-			return fmt.Errorf("failed to decode private key: %w", err)
-		}
-		oauth2PrivateKey = privateKey
-	}
-
 	return nil
-}
-
-func encodePrivateKeyToPEMBytes(key *rsa.PrivateKey) ([]byte, error) {
-	// Marshal the private key to DER format (PKCS#8 is a modern standard)
-	keyBytes, err := x509.MarshalPKCS8PrivateKey(key)
-	if err != nil {
-		return nil, err
-	}
-	// Create a PEM block
-	pemBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: keyBytes,
-	}
-	return pem.EncodeToMemory(pemBlock), nil
-}
-
-func decodePEMBytesToPrivateKey(keyBytes []byte) (*rsa.PrivateKey, error) {
-	// Decode the PEM block
-	block, _ := pem.Decode(keyBytes)
-	if block == nil {
-		return nil, fmt.Errorf("failed to decode PEM block")
-	}
-	// Parse the DER-encoded private key
-	privateKey, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		// Fallback to PKCS#1 if PKCS#8 fails (for older formats)
-		privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
-		if err != nil {
-			return nil, err
-		}
-	}
-	// Assert the private key to the correct type
-	rsaKey, ok := privateKey.(*rsa.PrivateKey)
-	if !ok {
-		return nil, fmt.Errorf("invalid private key type asserted from file: got %T, expected *rsa.PrivateKey", privateKey)
-	}
-	return rsaKey, nil
 }

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/go-jose/go-jose/v3"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
-	"github.com/ory/fosite/token/jwt"
 
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
@@ -62,10 +62,6 @@ func MustRegister(app core.App, config *Config) {
 }
 
 func Register(app core.App, config *Config) error {
-	// Load or generate the private key
-	if err := loadPrivateKeyFromAppStorage(app); err != nil {
-		return fmt.Errorf("Failed to load or generate private key: %w", err)
-	}
 	// Create the OAuth2 config
 	oauth2GlobalCfg = config
 	if oauth2GlobalCfg.GlobalSecret == nil {
@@ -99,6 +95,18 @@ func Register(app core.App, config *Config) error {
 		compose.OpenIDConnectRefreshFactory,
 	)
 
+	// Attach bootstrap handler
+
+	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
+		if err := e.Next(); err != nil {
+			return err
+		}
+		if err := loadPrivateKeyFromAppStorage(e.App); err != nil {
+			return fmt.Errorf("Failed to load or generate private key: %w", err)
+		}
+		return nil
+	})
+
 	// Attach HTTP handlers
 
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
@@ -114,7 +122,7 @@ func Register(app core.App, config *Config) error {
 					ResponseTypesSupported: []string{"code", "id_token", "id_token token"},
 				},
 				UserInfoEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/userinfo",
-				JwksURI:          app.Settings().Meta.AppURL + "/.well-known/openid-configuration/jwks",
+				JwksURI:          app.Settings().Meta.AppURL + "/.well-known/jwks.json",
 			},
 		)(oauth2GlobalCfg, se.Router)
 		return se.Next()
@@ -184,6 +192,13 @@ func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *C
 		if md1 != nil {
 			r.GET("/.well-known/oauth-authorization-server", handleJSON(md1.AuthorizationServerMetadata))
 			r.GET("/.well-known/openid-configuration", handleJSON(md1))
+			// rfc7517
+			// JSON Web Key (JWK)
+			// @ref https://datatracker.ietf.org/doc/html/rfc7517
+			rfc7517KeySet := &jose.JSONWebKeySet{
+				Keys: []jose.JSONWebKey{oauth2PrivateKey.Public()},
+			}
+			r.GET("/.well-known/jwks.json", handleJSON(rfc7517KeySet))
 		}
 		// rfc9728
 		// Protected Resource Metadata
@@ -231,27 +246,4 @@ func handleJSON(data any) func(e *core.RequestEvent) error {
 		}
 		return nil
 	}
-}
-
-//
-
-func ParseJWTToken(ctx context.Context, tokenString string) (*jwt.Token, *jwt.JWTClaims, error) {
-	token, err := jwt.ParseWithClaims(tokenString, jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-		if token.Method != "RS256" {
-			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
-		}
-		if oauth2PrivateKey == nil {
-			panic("[Plugin/OAuth2] ParseJWTToken: OAuth2 config is not initialized. You MUST call Register() before using this package.")
-		}
-		return &oauth2PrivateKey.PublicKey, nil
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-	if !token.Valid() {
-		return nil, nil, fmt.Errorf("invalid token")
-	}
-	claims := &jwt.JWTClaims{}
-	claims.FromMapClaims(token.Claims)
-	return token, claims, nil
 }
