@@ -233,7 +233,7 @@ func findSessionModelBySignature[T SessionModel](app core.App, m T, signature st
 	err = app.RecordQuery(c).
 		AndWhere(dbx.HashExp{"signature": signature}).
 		One(m)
-	return m, err
+	return m, mapRFCErr(err)
 }
 
 func findSessionModelByRequestID[T SessionModel](app core.App, m T, requestID string) (T, error) {
@@ -244,7 +244,7 @@ func findSessionModelByRequestID[T SessionModel](app core.App, m T, requestID st
 	err = app.RecordQuery(c).
 		AndWhere(dbx.HashExp{"request_id": requestID}).
 		One(m)
-	return m, err
+	return m, mapRFCErr(err)
 }
 
 func deleteSessionModelBySignature[T SessionModel](app core.App, m T, signature string) error {
@@ -269,4 +269,11 @@ func deleteSessionModelByRequestID[T SessionModel](app core.App, m T, requestID 
 		}
 	}
 	return app.Delete(m.ProxyRecord())
+}
+
+func mapRFCErr(err error) error {
+	if errors.Is(err, sql.ErrNoRows) {
+		return fosite.ErrNotFound
+	}
+	return err
 }
