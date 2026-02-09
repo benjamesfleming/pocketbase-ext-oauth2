@@ -3,6 +3,8 @@ package oauth2
 import (
 	"time"
 
+	"github.com/mohae/deepcopy"
+	"github.com/ory/fosite"
 	fositeopenid "github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 	"github.com/pocketbase/pocketbase/core"
@@ -50,4 +52,11 @@ func (s *Session) GetJWTClaims() jwt.JWTClaimsContainer {
 	}
 	claims.Add("collection", s.CollectionId)
 	return claims
+}
+
+func (s *Session) Clone() fosite.Session {
+	if s == nil {
+		return nil
+	}
+	return deepcopy.Copy(s).(fosite.Session)
 }
