@@ -116,19 +116,31 @@ func (m BaseSessionModel) GetExpiresAt() *time.Time {
 }
 
 func (m BaseSessionModel) GetScopes() []string {
-	return strings.Split(m.GetString("scopes"), "|")
+	if v := m.GetString("scopes"); len(v) > 0 {
+		return strings.Split(v, "|")
+	}
+	return nil
 }
 
 func (m BaseSessionModel) GetGrantedScopes() []string {
-	return strings.Split(m.GetString("granted_scopes"), "|")
+	if v := m.GetString("granted_scopes"); len(v) > 0 {
+		return strings.Split(v, "|")
+	}
+	return nil
 }
 
 func (m BaseSessionModel) GetRequestedAudience() []string {
-	return strings.Split(m.GetString("requested_audience"), "|")
+	if v := m.GetString("requested_audience"); len(v) > 0 {
+		return strings.Split(v, "|")
+	}
+	return nil
 }
 
 func (m BaseSessionModel) GetGrantedAudience() []string {
-	return strings.Split(m.GetString("granted_audience"), "|")
+	if v := m.GetString("granted_audience"); len(v) > 0 {
+		return strings.Split(v, "|")
+	}
+	return nil
 }
 
 func (m BaseSessionModel) GetFormData() string {
