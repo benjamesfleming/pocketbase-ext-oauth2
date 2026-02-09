@@ -36,6 +36,7 @@ type Config struct {
 var oauth2 fosite.OAuth2Provider
 var oauth2GlobalCfg *Config
 var oauth2GlobalStore *OAuth2Store
+var oauth2PrivateKey *jose.JSONWebKey
 var oauth2ProtectedResourceMetadata = map[string]*rfc9728.ProtectedResourceMetadata{}
 var oauth2ProtectedResourceMetadataMu = &sync.RWMutex{}
 
@@ -64,9 +65,6 @@ func MustRegister(app core.App, config *Config) {
 func Register(app core.App, config *Config) error {
 	// Create the OAuth2 config
 	oauth2GlobalCfg = config
-	if oauth2GlobalCfg.GlobalSecret == nil {
-		return fmt.Errorf("Invalid Config: GlobalSecret is required for OAuth2 config")
-	}
 	// Create the OAuth2 store
 	oauth2GlobalStore = NewOAuth2Store(app)
 	// Create the OAuth2 provider
@@ -77,6 +75,9 @@ func Register(app core.App, config *Config) error {
 			CoreStrategy: NewPocketBaseStrategy(app, oauth2GlobalCfg),
 			OpenIDConnectTokenStrategy: compose.NewOpenIDConnectStrategy(
 				func(ctx context.Context) (interface{}, error) {
+					if oauth2PrivateKey == nil {
+						panic("[Plugin/OAuth2] Private key is not initialized!! This should never happen because we load it during app bootstrap.")
+					}
 					return oauth2PrivateKey, nil
 				},
 				oauth2GlobalCfg,
@@ -98,11 +99,17 @@ func Register(app core.App, config *Config) error {
 	// Attach bootstrap handler
 
 	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
-		if err := e.Next(); err != nil {
+		err := e.Next()
+		if err != nil {
 			return err
 		}
-		if err := loadPrivateKeyFromAppStorage(e.App); err != nil {
-			return fmt.Errorf("Failed to load or generate private key: %w", err)
+		oauth2PrivateKey, err = loadPrivateKeyFromAppStorage(e.App)
+		if err != nil {
+			return fmt.Errorf("Plugin/OAuth2: Failed to load or generate private key: %w", err)
+		}
+		oauth2GlobalCfg.GlobalSecret, err = loadGlobalSecretFromAppStorage(e.App)
+		if err != nil {
+			return fmt.Errorf("Plugin/OAuth2: Failed to load or generate global secret: %w", err)
 		}
 		return nil
 	})

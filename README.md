@@ -5,8 +5,8 @@ Turn any pocketbase instance into an OAuth2 Authorization Server.
 TODO:
 
 - [ ] Add unit testing
-- [ ] Use secure signing secret
-- [ ] Use secure private key storage location(?)
+- [x] Use secure signing secret
+- [x] Use secure private key storage location(?)
 - [ ] Encrypt session data in the DB(?)
 - [ ] Cronjob to cleanup expired tokens
 - [ ] Enable OAuth-based logins
