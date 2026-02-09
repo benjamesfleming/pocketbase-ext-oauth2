@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/go-jose/go-jose/v3"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 
+	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 	_ "github.com/pocketbase/pocketbase/plugins/oauth2/migrations"
@@ -152,6 +154,41 @@ func Register(app core.App, config *Config) error {
 			e.Record.Set("client_secret", string(h))
 			return e.Next()
 		})
+
+	// Attach cron jobs
+
+	app.Cron().MustAdd(consts.CleanupExpiredSessionsJobName, "0 * * * *", func() {
+		for _, collection := range []string{
+			consts.AuthCodeCollectionName,
+			consts.AccessCollectionName,
+			consts.RefreshCollectionName,
+			consts.PKCECollectionName,
+			consts.OpenIDConnectCollectionName,
+		} {
+			records, err := app.FindAllRecords(
+				collection,
+				dbx.NewExp("expires_at < {:now}", dbx.Params{"now": time.Now().Unix()}),
+			)
+			if err != nil {
+				app.Logger().Error(
+					"[Plugin/OAuth2] Failed to query expired sessions for cleanup",
+					slog.Any("collection", collection),
+					slog.Any("error", err),
+				)
+				continue
+			}
+			for _, record := range records {
+				if err := app.Delete(record); err != nil {
+					app.Logger().Error(
+						"[Plugin/OAuth2] Failed to delete expired session during cleanup",
+						slog.Any("collection", collection),
+						slog.Any("record_id", record.Id),
+						slog.Any("error", err),
+					)
+				}
+			}
+		}
+	})
 
 	//
 

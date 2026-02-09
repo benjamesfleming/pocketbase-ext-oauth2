@@ -15,6 +15,7 @@ type PocketBaseStrategy struct {
 	App    core.App
 	Config interface {
 		fosite.AccessTokenIssuerProvider
+		fosite.AccessTokenLifespanProvider
 		fosite.JWTScopeFieldProvider
 	}
 	HMACSHAStrategy fositeoauth2.CoreStrategy
@@ -49,7 +50,7 @@ func (s *PocketBaseStrategy) GenerateAccessToken(ctx context.Context, requester 
 	if err != nil {
 		return "", "", errors.Wrap(err, "Failed to get auth record for session")
 	}
-	token, err = user.NewAuthToken()
+	token, err = user.NewStaticAuthToken(s.Config.GetAccessTokenLifespan(ctx))
 	if err != nil {
 		return "", "", errors.Wrap(err, "Failed to generate new auth token")
 	}

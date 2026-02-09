@@ -68,7 +68,7 @@ func (s *OAuth2Store) SetClientAssertionJWT(ctx context.Context, jti string, exp
 func (s *OAuth2Store) CreateAuthorizeCodeSession(ctx context.Context, code string, request fosite.Requester) (err error) {
 	m := newSessionModel(s.app, &AuthCodeModel{})
 	m.SetSignature(code)
-	m.SetRequester(request)
+	m.SetRequester(request, fosite.AuthorizeCode)
 
 	return s.app.Save(m)
 }
@@ -92,7 +92,7 @@ func (s *OAuth2Store) InvalidateAuthorizeCodeSession(ctx context.Context, code s
 func (s *OAuth2Store) CreateAccessTokenSession(ctx context.Context, signature string, request fosite.Requester) (err error) {
 	m := newSessionModel(s.app, &AccessTokenModel{})
 	m.SetSignature(signature)
-	m.SetRequester(request)
+	m.SetRequester(request, fosite.AccessToken)
 
 	return s.app.Save(m)
 }
@@ -101,7 +101,7 @@ func (s *OAuth2Store) CreateAccessTokenSession(ctx context.Context, signature st
 func (s *OAuth2Store) CreateRefreshTokenSession(ctx context.Context, signature string, accessSignature string, request fosite.Requester) (err error) {
 	m := newSessionModel(s.app, &RefreshTokenModel{})
 	m.SetSignature(signature)
-	m.SetRequester(request)
+	m.SetRequester(request, fosite.RefreshToken)
 
 	return s.app.Save(m)
 }
@@ -158,7 +158,7 @@ func (s *OAuth2Store) RotateRefreshToken(ctx context.Context, requestID string, 
 func (s *OAuth2Store) CreatePKCERequestSession(ctx context.Context, signature string, requester fosite.Requester) error {
 	m := newSessionModel(s.app, &PKCEModel{})
 	m.SetSignature(signature)
-	m.SetRequester(requester)
+	m.SetRequester(requester, "")
 
 	return s.app.Save(m)
 }
@@ -182,7 +182,7 @@ func (s *OAuth2Store) GetPKCERequestSession(ctx context.Context, signature strin
 func (s *OAuth2Store) CreateOpenIDConnectSession(ctx context.Context, authorizeCode string, requester fosite.Requester) error {
 	m := newSessionModel(s.app, &OpenIDConnectSessionModel{})
 	m.SetSignature(authorizeCode)
-	m.SetRequester(requester)
+	m.SetRequester(requester, fosite.IDToken)
 
 	return s.app.Save(m)
 }

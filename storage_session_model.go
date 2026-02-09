@@ -26,13 +26,15 @@ func (m BaseSessionModel) SetSignature(signature string) {
 	m.Set("signature", signature)
 }
 
-func (m BaseSessionModel) SetRequester(requester fosite.Requester) error {
+func (m BaseSessionModel) SetRequester(requester fosite.Requester, tokenType fosite.TokenType) error {
 	session := requester.GetSession()
-	subject := ""
+	var subject string
+	var expires_at int64
 	if session == nil {
 		// p.l.Debugf("Got an empty session in sqlSchemaFromRequest")
 	} else {
 		subject = session.GetSubject()
+		expires_at = session.GetExpiresAt(tokenType).Unix()
 	}
 	sessionBytes, err := json.Marshal(session)
 	if err != nil {
@@ -44,7 +46,7 @@ func (m BaseSessionModel) SetRequester(requester fosite.Requester) error {
 	m.Set("client_id", requester.GetClient().GetID())
 	m.Set("request_id", requester.GetID())
 	m.Set("requested_at", requester.GetRequestedAt().Unix())
-	m.Set("expires_at", nil)
+	m.Set("expires_at", expires_at)
 	m.Set("scopes", strings.Join(requester.GetRequestedScopes(), "|"))
 	m.Set("granted_scopes", strings.Join(requester.GetGrantedScopes(), "|"))
 	m.Set("requested_audience", strings.Join(requester.GetRequestedAudience(), "|"))
