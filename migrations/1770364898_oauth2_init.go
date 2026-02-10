@@ -24,9 +24,21 @@ func init() {
 			}
 		}
 
+		// JTI Collection
+
+		collection := core.NewBaseCollection(consts.JTICollectionName)
+		collection.System = true
+		collection.Fields.Add(
+			&core.TextField{Name: "jti"},
+			&core.NumberField{Name: "expires_at"},
+		)
+		if err := txApp.Save(collection); err != nil {
+			return err
+		}
+
 		// RFC 7591 Client Metadata Collection
 
-		collection := core.NewBaseCollection(consts.ClientCollectionName)
+		collection = core.NewBaseCollection(consts.ClientCollectionName)
 		collection.System = true
 		collection.Fields.Add(
 			&core.TextField{Name: "client_id"},
@@ -63,6 +75,9 @@ func init() {
 			if collection, err := txApp.FindCollectionByNameOrId(name); err == nil {
 				_ = txApp.Delete(collection)
 			}
+		}
+		if collection, err := txApp.FindCollectionByNameOrId(consts.JTICollectionName); err == nil {
+			_ = txApp.Delete(collection)
 		}
 		if collection, err := txApp.FindCollectionByNameOrId(consts.ClientCollectionName); err == nil {
 			_ = txApp.Delete(collection)

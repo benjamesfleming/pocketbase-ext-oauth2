@@ -11,6 +11,7 @@ const (
 	RefreshCollectionName       = "_oauth2Refresh"
 	PKCECollectionName          = "_oauth2PKCE"
 	OpenIDConnectCollectionName = "_oauth2OpenID"
+	JTICollectionName           = "_oauth2JTI"
 
 	CleanupExpiredSessionsJobName = "__pbOAuth2Cleanup__"
 )

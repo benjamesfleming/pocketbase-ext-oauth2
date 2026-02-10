@@ -12,5 +12,5 @@ TODO:
 - [ ] Enable OAuth-based logins
 - [ ] Add OAuth token/claims to RequestEvent or stash in context
 - [ ] Add OAuth scope validation
-- [ ] Implement OAuth2Store.ClientAssertionJWTValid
-- [ ] Implement OAuth2Store.SetClientAssertionJWT
+- [x] Implement OAuth2Store.ClientAssertionJWTValid
+- [x] Implement OAuth2Store.SetClientAssertionJWT

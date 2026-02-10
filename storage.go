@@ -56,12 +56,21 @@ func (s *OAuth2Store) RegisterClient(ctx context.Context, client *RFC7591ClientM
 
 // ClientAssertionJWTValid implements [fosite.ClientManager].
 func (s *OAuth2Store) ClientAssertionJWTValid(ctx context.Context, jti string) error {
-	panic("unimplemented")
+	if n, err := s.app.CountRecords(consts.JTICollectionName, dbx.HashExp{"jti": jti}); err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	} else if n > 0 {
+		return fosite.ErrJTIKnown
+	}
+	return nil
 }
 
 // SetClientAssertionJWT implements [fosite.ClientManager].
 func (s *OAuth2Store) SetClientAssertionJWT(ctx context.Context, jti string, exp time.Time) error {
-	panic("unimplemented")
+	m := NewJTIModel(s.app)
+	m.Set("jti", jti)
+	m.Set("expires_at", exp.Unix())
+
+	return s.app.Save(m)
 }
 
 // CreateAuthorizeCodeSession implements [oauth2.AuthorizeCodeStorage].

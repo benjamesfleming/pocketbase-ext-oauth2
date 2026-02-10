@@ -164,6 +164,7 @@ func Register(app core.App, config *Config) error {
 			consts.RefreshCollectionName,
 			consts.PKCECollectionName,
 			consts.OpenIDConnectCollectionName,
+			consts.JTICollectionName,
 		} {
 			records, err := app.FindAllRecords(
 				collection,
