@@ -8,9 +8,11 @@ TODO:
 - [x] Use secure signing secret
 - [x] Use secure private key storage location(?)
 - [ ] Encrypt session data in the DB(?)
-- [ ] Cronjob to cleanup expired tokens
+- [x] Cronjob to cleanup expired tokens
 - [ ] Enable OAuth-based logins
-- [ ] Add OAuth token/claims to RequestEvent or stash in context
-- [ ] Add OAuth scope validation
 - [x] Implement OAuth2Store.ClientAssertionJWTValid
 - [x] Implement OAuth2Store.SetClientAssertionJWT
+- [ ] ~~Add OAuth token/claims to RequestEvent or stash in context~~
+    - Access Token switched to regular PB auth token which doesn't support custom claims
+- [ ] ~~Add OAuth scope validation~~
+    - Access Token switched to regular PB auth token which doesn't support scopes
