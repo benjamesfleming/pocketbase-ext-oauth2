@@ -47,7 +47,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	if u == nil {
 		c, _ := ar.GetClient().(*client.Client)
 		state := map[string]interface{}{
-			"collection":       GetOAuth2Config().DefaultUserCollection,
+			"collection":       GetOAuth2Config().UserCollection,
 			"client_id":        c.ID,
 			"client_name":      c.Name,
 			"client_uri":       c.ClientURI,
@@ -64,7 +64,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	// but it can be a good way to ensure that the login hasn't been tampered
 	// with.
 
-	if u.Collection().Name != GetOAuth2Config().DefaultUserCollection {
+	if u.Collection().Name != GetOAuth2Config().UserCollection {
 		return e.BadRequestError("Invalid user collection", nil)
 	}
 

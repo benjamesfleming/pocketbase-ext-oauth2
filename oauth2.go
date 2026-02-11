@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -30,7 +31,8 @@ type Config struct {
 	*BaseConfig
 
 	PathPrefix                             string
-	DefaultUserCollection                  string
+	UserCollection                         string
+	UserInfoClaimStrategy                  UserInfoClaimStrategy
 	EnableRFC7591DynamicClientRegistration bool
 	EnableRFC9728ProtectedResourceMetadata bool
 }
@@ -67,6 +69,12 @@ func MustRegister(app core.App, config *Config) {
 func Register(app core.App, config *Config) error {
 	// Create the OAuth2 config
 	oauth2GlobalCfg = config
+	if oauth2GlobalCfg.PathPrefix == "" {
+		oauth2GlobalCfg.PathPrefix = "/oauth2"
+	}
+	if oauth2GlobalCfg.UserInfoClaimStrategy == nil {
+		oauth2GlobalCfg.UserInfoClaimStrategy = &DefaultUserInfoClaimStrategy{}
+	}
 	// Create the OAuth2 store
 	oauth2GlobalStore = NewOAuth2Store(app)
 	// Create the OAuth2 provider
@@ -134,6 +142,17 @@ func Register(app core.App, config *Config) error {
 				JwksURI:          app.Settings().Meta.AppURL + "/.well-known/jwks.json",
 			},
 		)(oauth2GlobalCfg, se.Router)
+		// rfc9728 middleware for protected resource endpoints
+		RegisterProtectedResourceMetadata(
+			&rfc9728.ProtectedResourceMetadata{
+				Resource: app.Settings().Meta.AppURL + config.PathPrefix + "/userinfo",
+				AuthorizationServers: []string{
+					app.Settings().Meta.AppURL,
+				},
+				BearerMethodsSupported: []string{"header"},
+				ScopesSupported:        []string{"openid", "profile", "email"},
+			},
+		)
 		return se.Next()
 	})
 
@@ -196,10 +215,13 @@ func Register(app core.App, config *Config) error {
 	return nil
 }
 
-func RegisterProtectedResourceMetadata(pattern string, md *rfc9728.ProtectedResourceMetadata) {
+func RegisterProtectedResourceMetadata(md *rfc9728.ProtectedResourceMetadata) {
 	if GetOAuth2Config().EnableRFC9728ProtectedResourceMetadata {
+		url, _ := url.Parse(md.Resource)
+		key := strings.Trim(url.Path, "/")
+
 		oauth2ProtectedResourceMetadataMu.Lock()
-		oauth2ProtectedResourceMetadata[pattern] = md
+		oauth2ProtectedResourceMetadata[key] = md
 		oauth2ProtectedResourceMetadataMu.Unlock()
 	}
 }
@@ -220,6 +242,7 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	rg.POST("/token", api_OAuth2Token)
 	rg.POST("/revoke", api_OAuth2Revoke)
 	rg.POST("/introspect", api_OAuth2Introspect)
+	rg.GET("/userinfo", api_OAuth2UserInfo).Bind(rfc9728.RequireAuthRFC9728WWWAuthenticateResponse())
 	// rfc7591
 	// Dynamic Client Registration
 	// @ref https://datatracker.ietf.org/doc/html/rfc7591
@@ -256,7 +279,7 @@ func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *C
 				// The resource identifier is expected to be in the path. For example, if the
 				// resource is "https://api.example.com/resource", the client would request
 				// "https://api.example.com/.well-known/oauth-protected-resource/resource".
-				key := "/" + strings.Trim(e.Request.PathValue("resource"), "/")
+				key := strings.Trim(e.Request.PathValue("resource"), "/")
 
 				if md, ok := oauth2ProtectedResourceMetadata[key]; ok {
 					return handleJSON(md)(e)
