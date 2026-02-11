@@ -2,6 +2,7 @@ package rfc9728
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/pocketbase/pocketbase/apis"
 	"github.com/pocketbase/pocketbase/core"
@@ -12,7 +13,13 @@ func RequireAuthRFC9728WWWAuthenticateResponse() *hook.Handler[*core.RequestEven
 	return &hook.Handler[*core.RequestEvent]{
 		Func: func(e *core.RequestEvent) error {
 			if e.Auth == nil {
-				e.Request.Header.Set("WWW-Authenticate", fmt.Sprintf(`Bearer resource_metadata="%s/.well-known/oauth-protected-resource"`, e.App.Settings().Meta.AppURL))
+				resourceMetadataURL := fmt.Sprintf(
+					"%s/.well-known/oauth-protected-resource/%s",
+					strings.Trim(e.App.Settings().Meta.AppURL, "/"),
+					strings.Trim(e.Request.URL.Path, "/"),
+				)
+
+				e.Response.Header().Add("WWW-Authenticate", fmt.Sprintf(`Bearer error="invalid_token", error_description="The access token provided is expired, revoked, malformed, or invalid for other reasons.", resource_metadata="%s"`, resourceMetadataURL))
 				e.Response.WriteHeader(401)
 				return nil
 			}
