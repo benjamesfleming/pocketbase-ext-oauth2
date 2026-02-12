@@ -1,8 +1,8 @@
 package oauth2
 
 import (
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
 type JTIModel struct {

@@ -1,11 +1,11 @@
 package oauth2
 
 import (
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/client"
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/client"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
 type ClientModel struct {

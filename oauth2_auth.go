@@ -9,9 +9,9 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/client"
 	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/client"
 )
 
 func api_OAuth2Authorize(e *core.RequestEvent) error {

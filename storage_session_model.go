@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
 	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
 )
 
 type SessionModel interface {

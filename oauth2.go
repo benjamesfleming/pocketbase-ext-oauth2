@@ -15,13 +15,13 @@ import (
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
 
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
+	_ "github.com/benjamesfleming/pocketbase-ext-oauth2/migrations"
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/openid"
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/rfc8414"
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/rfc9728"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/consts"
-	_ "github.com/pocketbase/pocketbase/plugins/oauth2/migrations"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/openid"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc8414"
-	"github.com/pocketbase/pocketbase/plugins/oauth2/rfc9728"
 	"github.com/pocketbase/pocketbase/tools/router"
 )
 
