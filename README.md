@@ -156,7 +156,7 @@ oauth2.RegisterProtectedResourceMetadata(
 )
 ```
 
-The metadata will be available at `/.well-known/oauth-protected-resource/data` and will automatically include an RFC 9728-compliant `WWW-Authenticate` header on `401` responses.
+The metadata will be available at `/.well-known/oauth-protected-resource/data`.
 
 ### License
 
