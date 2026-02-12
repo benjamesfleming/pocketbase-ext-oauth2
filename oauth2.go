@@ -109,21 +109,30 @@ func Register(app core.App, config *Config) error {
 
 	// Attach bootstrap handler
 
-	app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
-		err := e.Next()
-		if err != nil {
-			return err
-		}
-		oauth2PrivateKey, err = loadPrivateKeyFromAppStorage(e.App)
+	loadParams := func(app core.App) (err error) {
+		oauth2PrivateKey, err = loadPrivateKeyFromAppStorage(app)
 		if err != nil {
 			return fmt.Errorf("Plugin/OAuth2: Failed to load or generate private key: %w", err)
 		}
-		oauth2GlobalCfg.GlobalSecret, err = loadGlobalSecretFromAppStorage(e.App)
+		oauth2GlobalCfg.GlobalSecret, err = loadGlobalSecretFromAppStorage(app)
 		if err != nil {
 			return fmt.Errorf("Plugin/OAuth2: Failed to load or generate global secret: %w", err)
 		}
 		return nil
-	})
+	}
+
+	if app.IsBootstrapped() {
+		if err := loadParams(app); err != nil {
+			return err
+		}
+	} else {
+		app.OnBootstrap().BindFunc(func(e *core.BootstrapEvent) error {
+			if err := e.Next(); err != nil {
+				return err
+			}
+			return loadParams(e.App)
+		})
+	}
 
 	// Attach HTTP handlers
 
@@ -235,6 +244,20 @@ func IsRegistered() bool {
 
 //
 
+// ResetGlobalStateForTests resets the package-level global variables so each test
+// gets a clean slate.
+func ResetGlobalStateForTests() {
+	oauth2 = nil
+	oauth2GlobalCfg = nil
+	oauth2GlobalStore = nil
+	oauth2PrivateKey = nil
+	oauth2ProtectedResourceMetadataMu.Lock()
+	oauth2ProtectedResourceMetadata = map[string]*rfc9728.ProtectedResourceMetadata{}
+	oauth2ProtectedResourceMetadataMu.Unlock()
+}
+
+//
+
 func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	rg := r.Group(cfg.PathPrefix)
 	rg.GET("/auth", api_OAuth2Authorize)
@@ -263,21 +286,21 @@ func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *C
 		// @ref https://datatracker.ietf.org/doc/html/rfc8414
 		// @ref https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
 		if md1 != nil {
-			r.GET("/.well-known/oauth-authorization-server", handleJSON(md1.AuthorizationServerMetadata))
-			r.GET("/.well-known/openid-configuration", handleJSON(md1))
+			r.Any("/.well-known/oauth-authorization-server", handleJSON(md1.AuthorizationServerMetadata))
+			r.Any("/.well-known/openid-configuration", handleJSON(md1))
 			// rfc7517
 			// JSON Web Key (JWK)
 			// @ref https://datatracker.ietf.org/doc/html/rfc7517
 			rfc7517KeySet := &jose.JSONWebKeySet{
 				Keys: []jose.JSONWebKey{oauth2PrivateKey.Public()},
 			}
-			r.GET("/.well-known/jwks.json", handleJSON(rfc7517KeySet))
+			r.Any("/.well-known/jwks.json", handleJSON(rfc7517KeySet))
 		}
 		// rfc9728
 		// Protected Resource Metadata
 		// @ref https://datatracker.ietf.org/doc/html/rfc9728
 		if cfg.EnableRFC9728ProtectedResourceMetadata {
-			r.GET("/.well-known/oauth-protected-resource/{resource}", func(e *core.RequestEvent) error {
+			r.Any("/.well-known/oauth-protected-resource/{resource}", func(e *core.RequestEvent) error {
 				oauth2ProtectedResourceMetadataMu.RLock()
 				defer oauth2ProtectedResourceMetadataMu.RUnlock()
 
@@ -289,7 +312,7 @@ func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *C
 				if md, ok := oauth2ProtectedResourceMetadata[key]; ok {
 					return handleJSON(md)(e)
 				} else {
-					return e.NotFoundError("Unknown Protected Resource", nil)
+					return e.NotFoundError("", nil)
 				}
 			})
 		}

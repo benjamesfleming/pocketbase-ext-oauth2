@@ -13,7 +13,7 @@ func api_OAuth2Introspect(e *core.RequestEvent) error {
 	r := e.Request
 	w := e.Response
 	ctx := r.Context()
-	mySessionData := newSession(e.App, "", "")
+	mySessionData := NewSession(e.App, "", "")
 	ir, err := oauth2.NewIntrospectionRequest(ctx, r, mySessionData)
 	if err != nil {
 		e.App.Logger().Info("[Plugin/OAuth2] Error occurred in NewIntrospectionRequest", slog.Any("error", err))

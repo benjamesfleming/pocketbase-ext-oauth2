@@ -15,7 +15,7 @@ func api_OAuth2Token(e *core.RequestEvent) error {
 	// This context will be passed to all methods.
 	ctx := r.Context()
 	// Create an empty session object which will be passed to the request handlers
-	mySessionData := newSession(e.App, "", "")
+	mySessionData := NewSession(e.App, "", "")
 	// This will create an access request object and iterate through the registered TokenEndpointHandlers to validate the request.
 	accessRequest, err := oauth2.NewAccessRequest(ctx, r, mySessionData)
 

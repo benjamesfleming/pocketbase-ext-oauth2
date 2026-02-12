@@ -1,4 +1,4 @@
-- [ ] Add unit testing
+- [x] Add unit testing
 - [x] Use secure signing secret
 - [x] Use secure private key storage location(?)
 - [ ] Encrypt session data in the DB(?)
