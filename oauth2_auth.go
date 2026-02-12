@@ -57,7 +57,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 		// Base64-URL encode the state to make it safe for URL usage.
 		stateBytes, _ := json.Marshal(state)
 		stateB64Str := base64.RawURLEncoding.EncodeToString(stateBytes)
-		return e.Redirect(http.StatusTemporaryRedirect, e.App.Settings().Meta.AppURL+"/_/#/oauth2/login?state="+stateB64Str)
+		return e.Redirect(http.StatusTemporaryRedirect, e.App.Settings().Meta.AppURL+GetOAuth2Config().PathPrefix+"/login?state="+stateB64Str)
 	}
 
 	// Check if the user belongs to the expected collection. This is optional,
