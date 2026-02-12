@@ -12,6 +12,7 @@ TODO:
 - [ ] Enable OAuth-based logins
 - [x] Implement OAuth2Store.ClientAssertionJWTValid
 - [x] Implement OAuth2Store.SetClientAssertionJWT
+- [x] Rewrite UI to make plugin self-contained and prevent needing to modify PB source code
 - [ ] ~~Add OAuth token/claims to RequestEvent or stash in context~~
     - Access Token switched to regular PB auth token which doesn't support custom claims
 - [ ] ~~Add OAuth scope validation~~

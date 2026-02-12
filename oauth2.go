@@ -20,6 +20,7 @@ import (
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/openid"
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/rfc8414"
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/rfc9728"
+	"github.com/benjamesfleming/pocketbase-ext-oauth2/ui"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/router"
@@ -249,6 +250,10 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	if cfg.EnableRFC7591DynamicClientRegistration {
 		rg.POST("/register", api_OAuth2Register)
 	}
+	// ui
+	r.GET("/oauth2/login", func(e *core.RequestEvent) error {
+		return e.FileFS(ui.DistDirFS, "login.alpinejs.html")
+	})
 }
 
 func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *Config, r *router.Router[*core.RequestEvent]) {
