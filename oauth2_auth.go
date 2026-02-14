@@ -20,6 +20,10 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	w := e.Response
 	ctx := r.Context()
 
+	//
+
+	_ = r.ParseForm()
+
 	// Let's create an AuthorizeRequest object!
 	// It will analyze the request and extract important information like scopes, response type and others.
 	ar, err := oauth2.NewAuthorizeRequest(ctx, r)
@@ -35,10 +39,8 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	}
 	// You have now access to authorizeRequest, Code ResponseTypes, Scopes ...
 
-	r.ParseForm()
-	token := r.FormValue("token")
 	var u *core.Record
-	if len(token) > 0 {
+	if token := ar.GetRequestForm().Get("token"); len(token) > 0 {
 		if u, err = e.App.FindAuthRecordByToken(token); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return e.InternalServerError("Internal Error", err)
@@ -68,7 +70,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 			"prompt":           ar.GetRequestForm().Get("prompt"),
 			"login_hint":       ar.GetRequestForm().Get("login_hint"),
 			"requested_scopes": ar.GetRequestedScopes(),
-			"redirect_uri":     e.App.Settings().Meta.AppURL + r.RequestURI,
+			"redirect_uri":     e.App.Settings().Meta.AppURL + GetOAuth2Config().PathPrefix + "/auth?" + ar.GetRequestForm().Encode(),
 		}
 		// Base64-URL encode the state to make it safe for URL usage.
 		stateBytes, _ := json.Marshal(state)
