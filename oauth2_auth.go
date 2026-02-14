@@ -78,6 +78,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 
 	// Now that the user is authorized, we set up a session:
 	mySessionData := NewSession(e.App, u.Id, u.Collection().Id)
+	mySessionData.Claims.RequestedAt = ar.GetRequestedAt()
 
 	// When using the HMACSHA strategy you must use something that implements the HMACSessionContainer.
 	// It brings you the power of overriding the default values.
