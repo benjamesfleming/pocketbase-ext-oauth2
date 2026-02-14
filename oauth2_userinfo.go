@@ -329,6 +329,10 @@ func api_OAuth2UserInfo(e *core.RequestEvent) error {
 	// TODO: Support provided scopes to determine which claims to return.
 	//       For now we will just return all claims that we can populate
 	//       from the user record.
+	//
+	// TODO/conformance: The lack of scope support results in an OpenID Connect conformance
+	//                   warning. "EnsureUserInfoDoesNotContainName: Unexpectedly found
+	//                   name in userinfo response."
 	scopes := []string{"openid", "profile", "address", "email"}
 
 	info, err := GetOAuth2Config().UserInfoClaimStrategy.GetUserInfoClaims(e, scopes)

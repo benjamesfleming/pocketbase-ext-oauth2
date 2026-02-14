@@ -37,7 +37,7 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 
 	if len(md.Scope) == 0 {
 		// Default Scopes
-		md.Scope = "openid profile mcp:read mcp:write"
+		md.Scope = "openid profile email address phone"
 	}
 
 	if md.Contacts == nil {
