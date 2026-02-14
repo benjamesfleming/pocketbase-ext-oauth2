@@ -78,8 +78,8 @@ func api_OAuth2Register(e *core.RequestEvent) error {
 
 	//
 
-	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		return e.InternalServerError("", err)
