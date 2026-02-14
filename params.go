@@ -1,8 +1,8 @@
 package oauth2
 
 import (
-	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	paramsKeyOAuth2Ed25519Key   = "oauth2_ed25519_key"
+	paramsKeyOAuth2RSAKey       = "oauth2_rsa_key"
 	paramsKeyOAuth2GlobalSecret = "oauth2_global_secret"
 )
 
@@ -24,17 +24,17 @@ const (
 // other related operations. The key is stored in the internal app _params table to ensure it
 // persists across application restarts.
 func loadPrivateKeyFromAppStorage(app core.App) (*jose.JSONWebKey, error) {
-	return loadParamFromAppStorage(app, paramsKeyOAuth2Ed25519Key, &jose.JSONWebKey{}, func() (*jose.JSONWebKey, error) {
+	return loadParamFromAppStorage(app, paramsKeyOAuth2RSAKey, &jose.JSONWebKey{}, func() (*jose.JSONWebKey, error) {
 		// No existing key found, generate a new one
-		_, privateKey, err := ed25519.GenerateKey(rand.Reader)
+		privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to generate new ed25519 key")
+			return nil, errors.Wrap(err, "failed to generate new RSA key")
 		}
 		// Build the JWK from the generated private key
 		return &jose.JSONWebKey{
 			Key:       privateKey,
 			KeyID:     uuid.NewString(),
-			Algorithm: string(jose.EdDSA),
+			Algorithm: string(jose.RS256),
 			Use:       "sig",
 		}, nil
 	})
