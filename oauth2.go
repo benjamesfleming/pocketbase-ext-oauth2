@@ -352,6 +352,7 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	rg.POST("/revoke", api_OAuth2Revoke)
 	rg.POST("/introspect", api_OAuth2Introspect)
 	rg.GET("/userinfo", api_OAuth2UserInfo).Bind(rfc9728.RequireAuthRFC9728WWWAuthenticateResponse())
+	rg.POST("/userinfo", api_OAuth2UserInfo).Bind(rfc9728.RequireAuthRFC9728WWWAuthenticateResponse())
 	// rfc7591
 	// Dynamic Client Registration
 	// @ref https://datatracker.ietf.org/doc/html/rfc7591
