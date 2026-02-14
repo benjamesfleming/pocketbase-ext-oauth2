@@ -185,6 +185,10 @@ func Register(app core.App, config *Config) error {
 					},
 				},
 				UserInfoEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/userinfo",
+				AcrValuesSupported: []string{
+					"loa1",
+					"loa2",
+				},
 				SubjectTypesSupported: []string{
 					"public",
 				},

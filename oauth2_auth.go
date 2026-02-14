@@ -99,6 +99,21 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	mySessionData.Claims.AuthTime = time.Now()
 	mySessionData.Claims.RequestedAt = ar.GetRequestedAt()
 
+	var loa int = 1  // Level of Assurance (LOA)
+	var amr []string // Authentication Methods References (AMR)
+	if u.Collection().PasswordAuth.Enabled {
+		amr = append(amr, "pwd")
+	}
+	if u.Collection().OTP.Enabled {
+		amr = append(amr, "otp")
+	}
+	if u.Collection().MFA.Enabled {
+		loa += 1
+		amr = append(amr, "mfa")
+	}
+	mySessionData.Claims.AuthenticationMethodsReferences = amr
+	mySessionData.Claims.AuthenticationContextClassReference = fmt.Sprintf("loa%d", loa)
+
 	// When using the HMACSHA strategy you must use something that implements the HMACSessionContainer.
 	// It brings you the power of overriding the default values.
 	//
