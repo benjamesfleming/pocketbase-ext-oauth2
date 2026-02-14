@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/client"
 	"github.com/ory/fosite"
@@ -92,6 +93,9 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 
 	// Now that the user is authorized, we set up a session:
 	mySessionData := NewSession(e.App, u.Id, u.Collection().Id)
+	// TODO/conformance: The "auth_time" claim should be provided by the frontend to allow for
+	//                   proper handling of the "max_age" parameter.
+	mySessionData.Claims.AuthTime = time.Now()
 	mySessionData.Claims.RequestedAt = ar.GetRequestedAt()
 
 	// When using the HMACSHA strategy you must use something that implements the HMACSessionContainer.
