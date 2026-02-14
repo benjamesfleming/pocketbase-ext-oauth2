@@ -45,12 +45,26 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 		}
 	}
 	if u == nil {
+		if ar.GetRequestForm().Get("prompt") == "none" {
+			// TODO/conformance: The prompt parameter should be passed to the frontend to allow it to
+			//                   make informed decisions about how to handle the login. For example,
+			//                   if the prompt=none parameter is provided, the frontend should not
+			//                   display any login UI and instead should immediately return an error
+			//                   if the user is not authenticated.
+			//
+			// The "prompt=none" parameter indicates that the Authorization Server MUST NOT
+			// display any authentication or consent user interface pages.
+			// @ref https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrLoginRequired.WithHint("The prompt=none parameter was provided but the user is not authenticated."))
+			return nil
+		}
 		c, _ := ar.GetClient().(*client.Client)
 		state := map[string]interface{}{
 			"collection":       GetOAuth2Config().UserCollection,
 			"client_id":        c.ID,
 			"client_name":      c.Name,
 			"client_uri":       c.ClientURI,
+			"prompt":           ar.GetRequestForm().Get("prompt"),
 			"requested_scopes": ar.GetRequestedScopes(),
 			"redirect_uri":     e.App.Settings().Meta.AppURL + r.RequestURI,
 		}
