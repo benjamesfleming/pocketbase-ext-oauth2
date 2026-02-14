@@ -44,6 +44,10 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 		md.Contacts = []string{}
 	}
 
+	if md.RequestURIs == nil {
+		md.RequestURIs = []string{}
+	}
+
 	m.Set("client_id", clientID)
 	m.Set("client_name", md.ClientName)
 	m.Set("client_secret", clientSecret) // N.b. This will be hashed in the OnModelCreate hook before saving to the database.
@@ -64,7 +68,7 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 	m.Set("sector_identifier_uri", "")
 	m.Set("jwks_uri", md.JwksURI)
 	m.Set("jwks", md.Jwks)
-	m.Set("request_uris", []string{})
+	m.Set("request_uris", md.RequestURIs)
 	m.Set("token_endpoint_auth_method", md.TokenEndpointAuthMethod)
 	m.Set("token_endpoint_auth_signing_alg", "")
 	m.Set("request_object_signing_alg", "")

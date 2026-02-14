@@ -32,6 +32,10 @@ type RFC7591ClientMetadataRequest struct {
 	Jwks                    *jose.JSONWebKeySet `json:"jwks,omitempty"`
 	SoftwareID              string              `json:"software_id,omitempty"`
 	SoftwareVersion         string              `json:"software_version,omitempty"`
+
+	// The following fields are not part of the RFC7591 but are required for OpenID Connect client registration.
+	// @ref https://openid.net/specs/openid-connect-core-1_0.html#rfc.section.6.2
+	RequestURIs []string `json:"request_uris,omitempty"`
 }
 
 type RFC7591ClientMetadata struct {

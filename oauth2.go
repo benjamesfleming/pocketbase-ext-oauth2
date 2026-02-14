@@ -194,6 +194,9 @@ func Register(app core.App, config *Config) error {
 				UserInfoSigningAlgValuesSupported: []string{
 					"none",
 				},
+				RequestObjectSigningAlgValuesSupported: []string{
+					"none",
+				},
 				DisplayValuesSupported: []string{
 					"page",
 				},
@@ -232,9 +235,9 @@ func Register(app core.App, config *Config) error {
 					"updated_at",
 				},
 				ClaimsParameterSupported:      false,
-				RequestParameterSupported:     false,
-				RequestURIParameterSupported:  false,
-				RequireRequestURIRegistration: false,
+				RequestParameterSupported:     true,
+				RequestURIParameterSupported:  true,
+				RequireRequestURIRegistration: true,
 			},
 		)(oauth2GlobalCfg, se.Router)
 		// rfc9728 middleware for protected resource endpoints
