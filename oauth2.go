@@ -367,9 +367,11 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 		rg.POST("/register", api_OAuth2Register)
 	}
 	// ui
-	r.GET("/oauth2/login", func(e *core.RequestEvent) error {
+	uiHandler := func(e *core.RequestEvent) error {
 		return e.FileFS(ui.DistDirFS, "login.alpinejs.html")
-	})
+	}
+	r.GET("/oauth2/login", uiHandler)
+	r.POST("/oauth2/login", uiHandler)
 }
 
 func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *Config, r *router.Router[*core.RequestEvent]) {
