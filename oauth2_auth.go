@@ -66,6 +66,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 			"client_name":      c.Name,
 			"client_uri":       c.ClientURI,
 			"prompt":           ar.GetRequestForm().Get("prompt"),
+			"login_hint":       ar.GetRequestForm().Get("login_hint"),
 			"requested_scopes": ar.GetRequestedScopes(),
 			"redirect_uri":     e.App.Settings().Meta.AppURL + r.RequestURI,
 		}

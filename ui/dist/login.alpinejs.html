@@ -192,6 +192,9 @@
                         if (!this.stateData.redirect_uri) {
                             throw new Error("Missing redirect_uri");
                         }
+                        if (!!this.stateData.login_hint) {
+                            this.identity = this.stateData.login_hint;
+                        }
                     } catch (e) {
                         this.err = "Invalid state: " + (e instanceof Error ? e.message : String(e));
                     }
