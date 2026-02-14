@@ -19,7 +19,7 @@ func main() {
 			BaseConfig: &oauth2.BaseConfig{
 				AccessTokenLifespan:   time.Hour,
 				AuthorizeCodeLifespan: time.Minute * 15,
-				EnforcePKCE:           true,
+				EnforcePKCE:           false,
 				RefreshTokenScopes:    []string{}, // All scopes are allowed for refresh tokens
 			},
 			PathPrefix:                             "/oauth2",
