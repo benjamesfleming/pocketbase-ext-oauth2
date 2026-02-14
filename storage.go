@@ -56,21 +56,12 @@ func (s *OAuth2Store) RegisterClient(ctx context.Context, client *RFC7591ClientM
 
 // ClientAssertionJWTValid implements [fosite.ClientManager].
 func (s *OAuth2Store) ClientAssertionJWTValid(ctx context.Context, jti string) error {
-	if n, err := s.app.CountRecords(consts.JTICollectionName, dbx.HashExp{"jti": jti}); err != nil {
-		return fosite.ErrServerError.WithWrap(err)
-	} else if n > 0 {
-		return fosite.ErrJTIKnown
-	}
-	return nil
+	return hasJTIModel(s.app, jti)
 }
 
 // SetClientAssertionJWT implements [fosite.ClientManager].
 func (s *OAuth2Store) SetClientAssertionJWT(ctx context.Context, jti string, exp time.Time) error {
-	m := NewJTIModel(s.app)
-	m.Set("jti", jti)
-	m.Set("expires_at", exp.Unix())
-
-	return s.app.Save(m)
+	return newJTIModel(s.app, jti, exp)
 }
 
 // CreateAuthorizeCodeSession implements [oauth2.AuthorizeCodeStorage].
@@ -89,12 +80,32 @@ func (s *OAuth2Store) GetAuthorizeCodeSession(ctx context.Context, code string, 
 		return nil, err
 	}
 
-	return m.ToRequest(ctx, s, session)
+	req, err := m.ToRequest(ctx, s, session)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := hasJTIModel(s.app, code); err != nil {
+		if errors.Is(err, fosite.ErrJTIKnown) {
+			return req, fosite.ErrInvalidatedAuthorizeCode
+		} else {
+			return req, fosite.ErrServerError.WithWrap(err).WithDebug("Failed to check if the authorization code has been invalidated")
+		}
+	}
+
+	return req, nil
 }
 
 // InvalidateAuthorizeCodeSession implements [oauth2.AuthorizeCodeStorage].
 func (s *OAuth2Store) InvalidateAuthorizeCodeSession(ctx context.Context, code string) (err error) {
-	return deleteSessionModelBySignature(s.app, &AuthCodeModel{}, code)
+	m, err := findSessionModelBySignature(s.app, &AuthCodeModel{}, code)
+	if err != nil {
+		if errors.Is(err, fosite.ErrNotFound) {
+			return nil // if the session is not found, we can consider it already deleted and return no error
+		}
+	}
+
+	return newJTIModel(s.app, code, *m.GetExpiresAt())
 }
 
 // CreateAccessTokenSession implements [oauth2.AccessTokenStorage].
@@ -279,6 +290,27 @@ func deleteSessionModelByRequestID[T SessionModel](app core.App, m T, requestID 
 	}
 	return app.Delete(m.ProxyRecord())
 }
+
+//
+
+func newJTIModel(app core.App, jti string, exp time.Time) error {
+	m := NewJTIModel(app)
+	m.Set("jti", jti)
+	m.Set("expires_at", exp.Unix())
+
+	return app.Save(m)
+}
+
+func hasJTIModel(app core.App, jti string) error {
+	if n, err := app.CountRecords(consts.JTICollectionName, dbx.HashExp{"jti": jti}); err != nil {
+		return fosite.ErrServerError.WithWrap(err)
+	} else if n > 0 {
+		return fosite.ErrJTIKnown
+	}
+	return nil
+}
+
+//
 
 func mapRFCErr(err error) error {
 	if errors.Is(err, sql.ErrNoRows) {
