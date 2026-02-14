@@ -26,6 +26,7 @@ func NewSession(app core.App, recordId string, collectionId string) *Session {
 			Claims: &jwt.IDTokenClaims{
 				Issuer:    app.Settings().Meta.AppURL,
 				Subject:   recordId,
+				AuthTime:  time.Now(),
 				IssuedAt:  time.Now(),
 				ExpiresAt: time.Now().Add(time.Hour * 6),
 			},
