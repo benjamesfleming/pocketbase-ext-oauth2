@@ -28,9 +28,12 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 	clientID := uuid.New().String()
 	clientSecret := uuid.New().String()
 
-	md.TokenEndpointAuthMethod = "client_secret_post"
 	md.ResponseTypes = []string{"code"}
 	md.GrantTypes = []string{"authorization_code", "refresh_token"}
+
+	if len(md.TokenEndpointAuthMethod) == 0 {
+		md.TokenEndpointAuthMethod = "client_secret_basic"
+	}
 
 	if len(md.Scope) == 0 {
 		// Default Scopes
