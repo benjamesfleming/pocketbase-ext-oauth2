@@ -1,6 +1,8 @@
 package oauth2
 
 import (
+	"strings"
+
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/client"
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
 	"github.com/google/uuid"
@@ -36,8 +38,15 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 	}
 
 	if len(md.Scope) == 0 {
-		// Default Scopes
-		md.Scope = "openid profile email address phone"
+		// Scope - String containing a space-separated list of scope values (as
+		// described in Section 3.3 of OAuth 2.0 [RFC6749]) that the client
+		// can use when requesting access tokens.  The semantics of values in
+		// this list are service specific.  If omitted, an authorization
+		// server MAY register a client with a default set of scopes.
+		// @ref https://datatracker.ietf.org/doc/html/rfc7591#section-2
+		oauth2ProviderMetadataMu.RLock()
+		md.Scope = strings.Join(oauth2ProviderMetadata.ScopesSupported, " ")
+		oauth2ProviderMetadataMu.RUnlock()
 	}
 
 	if md.Contacts == nil {

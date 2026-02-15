@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -44,6 +45,8 @@ var oauth2GlobalStore *OAuth2Store
 var oauth2PrivateKey *jose.JSONWebKey
 var oauth2ProtectedResourceMetadata = map[string]*rfc9728.ProtectedResourceMetadata{}
 var oauth2ProtectedResourceMetadataMu = &sync.RWMutex{}
+var oauth2ProviderMetadata *openid.OpenIDProviderMetadata
+var oauth2ProviderMetadataMu = &sync.RWMutex{}
 
 func GetOAuth2Config() *Config {
 	if oauth2GlobalCfg == nil {
@@ -107,6 +110,111 @@ func Register(app core.App, config *Config) error {
 		compose.OpenIDConnectRefreshFactory,
 	)
 
+	// Create the provider metadata
+	oauth2ProviderMetadata = &openid.OpenIDProviderMetadata{
+		AuthorizationServerMetadata: rfc8414.AuthorizationServerMetadata{
+			Issuer:                app.Settings().Meta.AppURL,
+			RegistrationEndpoint:  app.Settings().Meta.AppURL + config.PathPrefix + "/register",
+			AuthzEndpoint:         app.Settings().Meta.AppURL + config.PathPrefix + "/auth",
+			TokenEndpoint:         app.Settings().Meta.AppURL + config.PathPrefix + "/token",
+			RevocationEndpoint:    app.Settings().Meta.AppURL + config.PathPrefix + "/revoke",
+			IntrospectionEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/introspect",
+
+			TokenEndpointAuthMethodsSupported:         []string{"client_secret_basic", "client_secret_post"},
+			RevocationEndpointAuthMethodsSupported:    []string{"client_secret_basic", "client_secret_post"},
+			IntrospectionEndpointAuthMethodsSupported: []string{"client_secret_basic", "client_secret_post"},
+
+			JwksURI: app.Settings().Meta.AppURL + "/.well-known/jwks.json",
+
+			ScopesSupported: []string{
+				"openid",
+				"profile",
+				"email",
+				"address",
+				"phone",
+			},
+			ResponseTypesSupported: []string{
+				"code",
+				"token",
+				"id_token",
+				"id_token token",
+				"code id_token",
+				"code id_token token",
+				"code token",
+			},
+			ResponseModesSupported: []string{
+				"query",
+				"fragment",
+			},
+			GrantTypesSupported: []string{
+				"authorization_code",
+				"implicit",
+				"refresh_token",
+			},
+			CodeChallengeMethodsSupported: []string{
+				"S256",
+			},
+		},
+		UserInfoEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/userinfo",
+		AcrValuesSupported: []string{
+			"loa1",
+			"loa2",
+		},
+		SubjectTypesSupported: []string{
+			"public",
+		},
+		IDTokenSigningAlgValuesSupported: []string{
+			"RS256",
+		},
+		UserInfoSigningAlgValuesSupported: []string{
+			"none",
+		},
+		RequestObjectSigningAlgValuesSupported: []string{
+			"none",
+		},
+		DisplayValuesSupported: []string{
+			"page",
+		},
+		ClaimTypesSupported: []string{
+			"normal",
+		},
+		ClaimsSupported: []string{
+			"amr",
+			"aud",
+			"azp",
+			"client_id",
+			"exp",
+			"iat",
+			"iss",
+			"jti",
+			"rat",
+			"sub",
+			"name",
+			"given_name",
+			"family_name",
+			"middle_name",
+			"nickname",
+			"preferred_username",
+			"profile",
+			"picture",
+			"website",
+			"email",
+			"email_verified",
+			"gender",
+			"birthdate",
+			"zoneinfo",
+			"locale",
+			"phone_number",
+			"phone_number_verified",
+			"address",
+			"updated_at",
+		},
+		ClaimsParameterSupported:      false,
+		RequestParameterSupported:     true,
+		RequestURIParameterSupported:  true,
+		RequireRequestURIRegistration: true,
+	}
+
 	// Attach bootstrap handler
 
 	loadParams := func(app core.App) (err error) {
@@ -139,111 +247,7 @@ func Register(app core.App, config *Config) error {
 	app.OnServe().BindFunc(func(se *core.ServeEvent) error {
 		// route handlers
 		bindOAuth2Handlers(oauth2GlobalCfg, se.Router)
-		bindOAuth2WellKnownHandlers(
-			&openid.OpenIDProviderMetadata{
-				AuthorizationServerMetadata: rfc8414.AuthorizationServerMetadata{
-					Issuer:                app.Settings().Meta.AppURL,
-					RegistrationEndpoint:  app.Settings().Meta.AppURL + config.PathPrefix + "/register",
-					AuthzEndpoint:         app.Settings().Meta.AppURL + config.PathPrefix + "/auth",
-					TokenEndpoint:         app.Settings().Meta.AppURL + config.PathPrefix + "/token",
-					RevocationEndpoint:    app.Settings().Meta.AppURL + config.PathPrefix + "/revoke",
-					IntrospectionEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/introspect",
-
-					TokenEndpointAuthMethodsSupported:         []string{"client_secret_basic", "client_secret_post"},
-					RevocationEndpointAuthMethodsSupported:    []string{"client_secret_basic", "client_secret_post"},
-					IntrospectionEndpointAuthMethodsSupported: []string{"client_secret_basic", "client_secret_post"},
-
-					JwksURI: app.Settings().Meta.AppURL + "/.well-known/jwks.json",
-
-					ScopesSupported: []string{
-						"openid",
-						"profile",
-						"email",
-						"address",
-						"phone",
-					},
-					ResponseTypesSupported: []string{
-						"code",
-						"token",
-						"id_token",
-						"id_token token",
-						"code id_token",
-						"code id_token token",
-						"code token",
-					},
-					ResponseModesSupported: []string{
-						"query",
-						"fragment",
-					},
-					GrantTypesSupported: []string{
-						"authorization_code",
-						"implicit",
-						"refresh_token",
-					},
-					CodeChallengeMethodsSupported: []string{
-						"S256",
-					},
-				},
-				UserInfoEndpoint: app.Settings().Meta.AppURL + config.PathPrefix + "/userinfo",
-				AcrValuesSupported: []string{
-					"loa1",
-					"loa2",
-				},
-				SubjectTypesSupported: []string{
-					"public",
-				},
-				IDTokenSigningAlgValuesSupported: []string{
-					"RS256",
-				},
-				UserInfoSigningAlgValuesSupported: []string{
-					"none",
-				},
-				RequestObjectSigningAlgValuesSupported: []string{
-					"none",
-				},
-				DisplayValuesSupported: []string{
-					"page",
-				},
-				ClaimTypesSupported: []string{
-					"normal",
-				},
-				ClaimsSupported: []string{
-					"amr",
-					"aud",
-					"azp",
-					"client_id",
-					"exp",
-					"iat",
-					"iss",
-					"jti",
-					"rat",
-					"sub",
-					"name",
-					"given_name",
-					"family_name",
-					"middle_name",
-					"nickname",
-					"preferred_username",
-					"profile",
-					"picture",
-					"website",
-					"email",
-					"email_verified",
-					"gender",
-					"birthdate",
-					"zoneinfo",
-					"locale",
-					"phone_number",
-					"phone_number_verified",
-					"address",
-					"updated_at",
-				},
-				ClaimsParameterSupported:      false,
-				RequestParameterSupported:     true,
-				RequestURIParameterSupported:  true,
-				RequireRequestURIRegistration: true,
-			},
-		)(oauth2GlobalCfg, se.Router)
+		bindOAuth2WellKnownHandlers(oauth2GlobalCfg, se.Router)
 		// rfc9728 middleware for protected resource endpoints
 		RegisterProtectedResourceMetadata(
 			&rfc9728.ProtectedResourceMetadata{
@@ -322,9 +326,24 @@ func RegisterProtectedResourceMetadata(md *rfc9728.ProtectedResourceMetadata) {
 		url, _ := url.Parse(md.Resource)
 		key := strings.Trim(url.Path, "/")
 
+		oauth2ProviderMetadataMu.Lock()
 		oauth2ProtectedResourceMetadataMu.Lock()
+
+		// Store the metadata for this resource. It will be served at the endpoint
+
 		oauth2ProtectedResourceMetadata[key] = md
+
+		// Update the provider metadata's scopes_supported to include any scopes
+		// from the protected resource metadata that aren't already included.
+
+		for _, scope := range md.ScopesSupported {
+			if !slices.Contains(oauth2ProviderMetadata.ScopesSupported, scope) {
+				oauth2ProviderMetadata.ScopesSupported = append(oauth2ProviderMetadata.ScopesSupported, scope)
+			}
+		}
+
 		oauth2ProtectedResourceMetadataMu.Unlock()
+		oauth2ProviderMetadataMu.Unlock()
 	}
 }
 
@@ -374,43 +393,51 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	r.POST("/oauth2/login", uiHandler)
 }
 
-func bindOAuth2WellKnownHandlers(md1 *openid.OpenIDProviderMetadata) func(cfg *Config, r *router.Router[*core.RequestEvent]) {
-	return func(cfg *Config, r *router.Router[*core.RequestEvent]) {
-		// rfc8414
-		// Authorization Server Metadata
-		// @ref https://datatracker.ietf.org/doc/html/rfc8414
-		// @ref https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
-		if md1 != nil {
-			r.Any("/.well-known/oauth-authorization-server", handleJSON(md1.AuthorizationServerMetadata))
-			r.Any("/.well-known/openid-configuration", handleJSON(md1))
-			// rfc7517
-			// JSON Web Key (JWK)
-			// @ref https://datatracker.ietf.org/doc/html/rfc7517
-			rfc7517KeySet := &jose.JSONWebKeySet{
-				Keys: []jose.JSONWebKey{oauth2PrivateKey.Public()},
+func bindOAuth2WellKnownHandlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
+	// rfc8414
+	// Authorization Server Metadata
+	// @ref https://datatracker.ietf.org/doc/html/rfc8414
+	// @ref https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
+	r.Any("/.well-known/oauth-authorization-server", func(e *core.RequestEvent) error {
+		oauth2ProviderMetadataMu.RLock()
+		defer oauth2ProviderMetadataMu.RUnlock()
+
+		return handleJSON(oauth2ProviderMetadata.AuthorizationServerMetadata)(e)
+	})
+	r.Any("/.well-known/openid-configuration", func(e *core.RequestEvent) error {
+		oauth2ProviderMetadataMu.RLock()
+		defer oauth2ProviderMetadataMu.RUnlock()
+
+		return handleJSON(oauth2ProviderMetadata)(e)
+	})
+
+	// rfc7517
+	// JSON Web Key (JWK)
+	// @ref https://datatracker.ietf.org/doc/html/rfc7517
+	rfc7517KeySet := &jose.JSONWebKeySet{
+		Keys: []jose.JSONWebKey{oauth2PrivateKey.Public()},
+	}
+	r.Any("/.well-known/jwks.json", handleJSON(rfc7517KeySet))
+
+	// rfc9728
+	// Protected Resource Metadata
+	// @ref https://datatracker.ietf.org/doc/html/rfc9728
+	if cfg.EnableRFC9728ProtectedResourceMetadata {
+		r.Any("/.well-known/oauth-protected-resource/{resource}", func(e *core.RequestEvent) error {
+			oauth2ProtectedResourceMetadataMu.RLock()
+			defer oauth2ProtectedResourceMetadataMu.RUnlock()
+
+			// The resource identifier is expected to be in the path. For example, if the
+			// resource is "https://api.example.com/resource", the client would request
+			// "https://api.example.com/.well-known/oauth-protected-resource/resource".
+			key := strings.Trim(e.Request.PathValue("resource"), "/")
+
+			if md, ok := oauth2ProtectedResourceMetadata[key]; ok {
+				return handleJSON(md)(e)
+			} else {
+				return e.NotFoundError("", nil)
 			}
-			r.Any("/.well-known/jwks.json", handleJSON(rfc7517KeySet))
-		}
-		// rfc9728
-		// Protected Resource Metadata
-		// @ref https://datatracker.ietf.org/doc/html/rfc9728
-		if cfg.EnableRFC9728ProtectedResourceMetadata {
-			r.Any("/.well-known/oauth-protected-resource/{resource}", func(e *core.RequestEvent) error {
-				oauth2ProtectedResourceMetadataMu.RLock()
-				defer oauth2ProtectedResourceMetadataMu.RUnlock()
-
-				// The resource identifier is expected to be in the path. For example, if the
-				// resource is "https://api.example.com/resource", the client would request
-				// "https://api.example.com/.well-known/oauth-protected-resource/resource".
-				key := strings.Trim(e.Request.PathValue("resource"), "/")
-
-				if md, ok := oauth2ProtectedResourceMetadata[key]; ok {
-					return handleJSON(md)(e)
-				} else {
-					return e.NotFoundError("", nil)
-				}
-			})
-		}
+		})
 	}
 }
 
