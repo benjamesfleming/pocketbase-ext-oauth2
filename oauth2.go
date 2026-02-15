@@ -387,7 +387,7 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	}
 	// ui
 	uiHandler := func(e *core.RequestEvent) error {
-		return e.FileFS(ui.DistDirFS, "login.alpinejs.html")
+		return e.FileFS(ui.DistDirFS, "login.html")
 	}
 	r.GET("/oauth2/login", uiHandler)
 	r.POST("/oauth2/login", uiHandler)

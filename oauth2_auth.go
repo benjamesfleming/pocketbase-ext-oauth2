@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/client"
@@ -40,27 +41,54 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 	// You have now access to authorizeRequest, Code ResponseTypes, Scopes ...
 
 	var u *core.Record
-	if token := ar.GetRequestForm().Get("token"); len(token) > 0 {
+	var issuedAt time.Time
+	var requestedAt time.Time
+
+	//
+
+	if err := ar.GetRequestForm().Get("error"); err != "" {
+		switch err {
+		case "account_selection_required", "consent_required", "interaction_required":
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrInteractionRequired)
+		case "login_required":
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrLoginRequired)
+		default:
+			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrServerError.WithDebug(fmt.Sprintf("Unknown error: %s", err)))
+		}
+		return nil
+	}
+
+	if token := ar.GetRequestForm().Get("pb_token"); len(token) > 0 {
 		if u, err = e.App.FindAuthRecordByToken(token); err != nil {
 			if !errors.Is(err, sql.ErrNoRows) {
 				return e.InternalServerError("Internal Error", err)
 			}
 		}
 	}
-	if u == nil {
-		if ar.GetRequestForm().Get("prompt") == "none" {
-			// TODO/conformance: The prompt parameter should be passed to the frontend to allow it to
-			//                   make informed decisions about how to handle the login. For example,
-			//                   if the prompt=none parameter is provided, the frontend should not
-			//                   display any login UI and instead should immediately return an error
-			//                   if the user is not authenticated.
-			//
-			// The "prompt=none" parameter indicates that the Authorization Server MUST NOT
-			// display any authentication or consent user interface pages.
-			// @ref https://openid.net/specs/openid-connect-core-1_0.html#AuthRequest
-			oauth2.WriteAuthorizeError(ctx, w, ar, fosite.ErrLoginRequired.WithHint("The prompt=none parameter was provided but the user is not authenticated."))
-			return nil
+
+	if tokenIat := ar.GetRequestForm().Get("pb_token_iat"); len(tokenIat) > 0 {
+		if iatInt, err := strconv.ParseInt(tokenIat, 10, 64); err == nil {
+			issuedAt = time.Unix(iatInt, 0).In(time.UTC)
 		}
+	}
+
+	if rat := ar.GetRequestForm().Get("rat"); len(rat) > 0 {
+		if ratInt, err := strconv.ParseInt(rat, 10, 64); err == nil {
+			requestedAt = time.Unix(ratInt, 0).In(time.UTC)
+		}
+	}
+	if requestedAt.IsZero() {
+		requestedAt = ar.GetRequestedAt()
+	}
+
+	ar.GetRequestForm().Del("pb_token")
+	ar.GetRequestForm().Del("pb_token_iat")
+
+	if !ar.GetRequestForm().Has("rat") {
+		ar.GetRequestForm().Set("rat", strconv.FormatInt(requestedAt.Unix(), 10))
+	}
+
+	if u == nil {
 		c, _ := ar.GetClient().(*client.Client)
 		state := map[string]interface{}{
 			"collection":       GetOAuth2Config().UserCollection,
@@ -68,6 +96,7 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 			"client_name":      c.Name,
 			"client_uri":       c.ClientURI,
 			"prompt":           ar.GetRequestForm().Get("prompt"),
+			"max_age":          ar.GetRequestForm().Get("max_age"),
 			"login_hint":       ar.GetRequestForm().Get("login_hint"),
 			"requested_scopes": ar.GetRequestedScopes(),
 			"redirect_uri":     e.App.Settings().Meta.AppURL + GetOAuth2Config().PathPrefix + "/auth?" + ar.GetRequestForm().Encode(),
@@ -96,10 +125,8 @@ func api_OAuth2Authorize(e *core.RequestEvent) error {
 
 	// Now that the user is authorized, we set up a session:
 	mySessionData := NewSession(e.App, u.Id, u.Collection().Id)
-	// TODO/conformance: The "auth_time" claim should be provided by the frontend to allow for
-	//                   proper handling of the "max_age" parameter.
-	mySessionData.Claims.AuthTime = time.Now()
-	mySessionData.Claims.RequestedAt = ar.GetRequestedAt()
+	mySessionData.Claims.AuthTime = issuedAt
+	mySessionData.Claims.RequestedAt = requestedAt
 
 	var loa int = 1  // Level of Assurance (LOA)
 	var amr []string // Authentication Methods References (AMR)

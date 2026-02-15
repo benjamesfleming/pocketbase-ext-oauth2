@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ui2</title>
+    <style>
+        [x-cloak] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <div id="app" x-data="oauth" @alpine:init="oauth.init()">
+        <div class="app-layout">
+            <div class="app-body">
+                <div class="page-wrapper full-page center-content">
+                    <main class="page-content">
+                        <div class="wrapper wrapper-sm m-b-xl panel-wrapper">
+                            <div class="block txt-center m-b-lg" x-cloak>
+                                <figure class="logo">
+                                    <img src="/_/images/logo.svg" alt="PocketBase logo" width="40" height="40" />
+                                    <span class="txt">Pocket<strong>Base</strong></span>
+                                </figure>
+                            </div>
+                            <div class="clearfix" />
+                            <div>
+                                <div class="content txt-center m-b-base" x-cloak>
+                                    <h4 x-show="state.authRecord == null">Login</h4>
+                                    <h4 x-show="state.authRecord">
+                                        Welcome back, <span x-text="uiUserLabelShort(state.authRecord)"></span>!<br/>
+                                        <small class="txt-muted">Not you? <a href="#" @click.prevent="switchAccount()">Switch account</a></small>
+                                    </h4>
+                                </div>
+                                <div id="slot">
+                                    <!-- Error state -->
+                                    <div x-show="error" class="error" x-text="error" x-cloak></div>
+
+                                    <!-- Account selection -->
+                                    <div x-show="showAccountSelection()" class="block" x-cloak>
+                                        <template x-for="(record, index) in state.validAccountsForReq" :key="index">
+                                            <button type="button" class="btn btn-lg btn-block btn-next m-b-sm" @click="selectAccount(record)">
+                                                <span class="txt" x-text="uiUserLabel(record)"></span>
+                                                <i class="ri-arrow-right-line"></i>
+                                            </button>
+                                        </template>
+                                        <div class="txt-center">
+                                            Or, <small class="txt-muted"><a href="#" @click.prevent="newAccount()">use another account</a></small>
+                                        </div>
+                                    </div>
+
+                                    <!-- Password login form -->
+                                    <form x-show="showLoginPassword()" @submit.prevent="submitAuthWithPassword()" class="block" x-cloak>
+                                        <div class="form-field required">
+                                            <label x-text="uiIdentityLabel()"></label>
+                                            <input x-model="state.passwordLoginForm.identity" :type="isEmailIdentity() ? 'email' : 'text'" required autofocus />
+                                        </div>
+                                        <div class="form-field required">
+                                            <label for="field_password">Password</label>
+                                            <input x-model="state.passwordLoginForm.password" type="password" id="field_password" required />
+                                        </div>
+                                        <button type="submit" class="btn btn-lg btn-block btn-next" :disabled="state.passwordLoginForm.submitting">
+                                            <span class="txt">Continue</span>
+                                            <i class="ri-arrow-right-line"></i>
+                                        </button>
+                                    </form>
+
+                                    <!-- OTP request form (no otpId yet) -->
+                                    <form x-show="showLoginRequestOtp()" @submit.prevent="requestOTP()" class="block" x-cloak>
+                                        <div class="form-field required">
+                                            <label for="field_email">Email</label>
+                                            <input x-model="state.otpLoginForm.identity" type="email" id="field_email" required autofocus>
+                                        </div>
+                                        <button type="submit" class="btn btn-lg btn-block btn-next" :disabled="state.otpLoginForm.requesting">
+                                            <i class="ri-mail-send-line"></i>
+                                            <span class="txt">Send OTP</span>
+                                        </button>
+                                    </form>
+
+                                    <!-- OTP auth form (otpId exists) -->
+                                    <div x-show="showLoginOtp()" x-cloak>
+                                        <div x-show="state.otpLoginForm.identity" class="content txt-center m-b-sm">
+                                            <p>
+                                                Check your <strong x-text="state.otpLoginForm.identity"></strong> inbox and
+                                                enter in the input below the received One-time password (OTP).
+                                            </p>
+                                        </div>
+                                        <form @submit.prevent="submitAuthWithOTP()" class="block">
+                                            <div class="form-field required">
+                                                <label for="field_otpId">Id</label>
+                                                <input x-model="state.otpLoginForm.id" type="text" id="field_otpId" required autofocus>
+                                            </div>
+                                            <div class="form-field required">
+                                                <label for="field_otpPassword">One-time password</label>
+                                                <input x-model="state.otpLoginForm.password" type="password" id="field_otpPassword" required>
+                                            </div>
+                                            <button type="submit" class="btn btn-lg btn-block btn-next" :disabled="state.otpLoginForm.submitting">
+                                                <span class="txt">Continue</span>
+                                                <i class="ri-arrow-right-line"></i>
+                                            </button>
+                                        </form>
+                                        <div class="content txt-center m-t-sm">
+                                            <button type="button" class="link-hint" @click="requestOTP()" :disabled="state.otpLoginForm.requesting">
+                                                Request another OTP
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Consent form -->
+                                    <div x-show="showConsent()" x-cloak>
+                                        <form @submit.prevent="submitConsent()" class="block">
+                                            <div class="oauth2-consent m-b-lg">
+                                                <div class="txt-center m-b-base">
+                                                    <h1 x-text="uiClientNameLabel()"></h1>
+                                                    <hr />
+                                                    <p>
+                                                        A third-party application is requesting access to your data.
+                                                        Approving this will grant the application full access to your
+                                                        data. Please review the requested permissions below before
+                                                        continuing.
+                                                    </p>
+                                                    <hr />
+                                                </div>
+                                                <template x-for="scope in (params.requested_scopes || [])">
+                                                    <div class="form-field form-field-checkbox">
+                                                        <input type="checkbox" :id="scope" required checked disabled />
+                                                        <label :for="scope" x-text="scope"></label>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="submit" class="btn btn-lg btn-block btn-next" :disabled="state.consentForm.submitting">
+                                                <span class="txt" x-text="uiConsentButtonLabel()"></span>
+                                                <i class="ri-arrow-right-line"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    <!-- Loading spinner -->
+                                    <div x-show="!error && !state.methods" class="block txt-center">
+                                        <span class="loader"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                </div>
+                <div class="toasts-wrapper">
+                    <template x-for="toast in $store.toast.toasts">
+                        <div :class="`alert txt-break ${toast.alertClass}`" >
+                            <div class="icon">
+                                <i :class="toast.iconClass"></i>
+                            </div>
+                            <div class="content" x-text="toast.message"></div>
+                            <button type="button" class="close" @click="$store.toast.removeToast(toast.id)"><i class="ri-close-line"></i></button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/src/login.ts"></script>
+  </body>
+</html>
