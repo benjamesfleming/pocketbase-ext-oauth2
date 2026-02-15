@@ -33,7 +33,7 @@ func NewClientFromRFC7591Metadata(app core.App, md *RFC7591ClientMetadataRequest
 	md.ResponseTypes = []string{"code"}
 	md.GrantTypes = []string{"authorization_code", "refresh_token"}
 
-	if len(md.TokenEndpointAuthMethod) == 0 {
+	if len(md.TokenEndpointAuthMethod) == 0 || md.TokenEndpointAuthMethod == "none" {
 		md.TokenEndpointAuthMethod = "client_secret_basic"
 	}
 
