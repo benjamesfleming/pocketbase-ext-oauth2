@@ -3,7 +3,7 @@ import PocketBase, { type AuthRecord, type AuthMethodsList } from "pocketbase";
 import MultiAuthStore from "./lib/multi-auth-store";
 import toastStore from "./lib/toast-store";
 import { postRedirect, sentenize, base64UrlDecode } from "./lib/utils";
-import "./login.style.css";
+import "./login.style.min.css";
 
 //
 
