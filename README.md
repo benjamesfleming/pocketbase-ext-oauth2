@@ -75,9 +75,9 @@ All OAuth2 endpoints are served under the configured `PathPrefix` (default `/oau
 | GET/POST | `/oauth2/token` | Token endpoint |
 | POST | `/oauth2/revoke` | Token revocation |
 | POST | `/oauth2/introspect` | Token introspection |
-| GET | `/oauth2/userinfo` | OpenID Connect UserInfo |
+| GET/POST | `/oauth2/userinfo` | OpenID Connect UserInfo |
 | POST | `/oauth2/register` | Dynamic client registration (RFC 7591, optional) |
-| GET | `/oauth2/login` | Built-in login/consent UI |
+| GET/POST | `/oauth2/login` | Built-in login/consent UI |
 
 #### Discovery & Metadata
 
@@ -96,7 +96,7 @@ Access tokens issued by this plugin are **native PocketBase auth tokens**. This 
 
 #### Key Management
 
-On first bootstrap the plugin generates an **Ed25519** signing key pair and a **global HMAC secret**, both stored in PocketBase's internal `_params` table. These persist across restarts and are used for signing ID tokens, authorization codes, and refresh tokens respectively.
+On first bootstrap the plugin generates an **RSA (RS256)** signing key pair and a **global HMAC secret**, both stored in PocketBase's internal `_params` table. These persist across restarts and are used for signing ID tokens, authorization codes, and refresh tokens respectively.
 
 #### Session Storage
 
