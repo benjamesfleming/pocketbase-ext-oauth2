@@ -47,7 +47,9 @@ func loadGlobalSecretFromAppStorage(app core.App) ([]byte, error) {
 	return loadParamFromAppStorage(app, paramsKeyOAuth2GlobalSecret, []byte{}, func() ([]byte, error) {
 		// No existing secret found, generate a new one
 		ret := make([]byte, 32)
-		rand.Read(ret)
+		if _, err := rand.Read(ret); err != nil {
+			return nil, err
+		}
 		return ret, nil
 	})
 }

@@ -463,7 +463,8 @@ func handleJSON(r *router.Router[*core.RequestEvent], path string, getter func(e
 		}
 		data, err := getter(e)
 		if err != nil {
-			if errors.Is(err, &router.ApiError{}) {
+			var apiErr *router.ApiError
+			if errors.As(err, &apiErr) {
 				return err
 			}
 			return e.InternalServerError("", err)
@@ -477,4 +478,5 @@ func handleJSON(r *router.Router[*core.RequestEvent], path string, getter func(e
 
 	r.OPTIONS(path, h)
 	r.GET(path, h)
+	r.POST(path, h)
 }
