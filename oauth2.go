@@ -15,6 +15,7 @@ import (
 	"github.com/go-jose/go-jose/v3"
 	"github.com/ory/fosite"
 	"github.com/ory/fosite/compose"
+	"github.com/pkg/errors"
 
 	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
 	_ "github.com/benjamesfleming/pocketbase-ext-oauth2/migrations"
@@ -398,17 +399,17 @@ func bindOAuth2WellKnownHandlers(cfg *Config, r *router.Router[*core.RequestEven
 	// Authorization Server Metadata
 	// @ref https://datatracker.ietf.org/doc/html/rfc8414
 	// @ref https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
-	r.Any("/.well-known/oauth-authorization-server", func(e *core.RequestEvent) error {
+	handleJSON(r, "/.well-known/oauth-authorization-server", func(_ *core.RequestEvent) (interface{}, error) {
 		oauth2ProviderMetadataMu.RLock()
 		defer oauth2ProviderMetadataMu.RUnlock()
 
-		return handleJSON(oauth2ProviderMetadata.AuthorizationServerMetadata)(e)
+		return oauth2ProviderMetadata.AuthorizationServerMetadata, nil
 	})
-	r.Any("/.well-known/openid-configuration", func(e *core.RequestEvent) error {
+	handleJSON(r, "/.well-known/openid-configuration", func(_ *core.RequestEvent) (interface{}, error) {
 		oauth2ProviderMetadataMu.RLock()
 		defer oauth2ProviderMetadataMu.RUnlock()
 
-		return handleJSON(oauth2ProviderMetadata)(e)
+		return oauth2ProviderMetadata, nil
 	})
 
 	// rfc7517
@@ -417,13 +418,15 @@ func bindOAuth2WellKnownHandlers(cfg *Config, r *router.Router[*core.RequestEven
 	rfc7517KeySet := &jose.JSONWebKeySet{
 		Keys: []jose.JSONWebKey{oauth2PrivateKey.Public()},
 	}
-	r.Any("/.well-known/jwks.json", handleJSON(rfc7517KeySet))
+	handleJSON(r, "/.well-known/jwks.json", func(_ *core.RequestEvent) (interface{}, error) {
+		return rfc7517KeySet, nil
+	})
 
 	// rfc9728
 	// Protected Resource Metadata
 	// @ref https://datatracker.ietf.org/doc/html/rfc9728
 	if cfg.EnableRFC9728ProtectedResourceMetadata {
-		r.Any("/.well-known/oauth-protected-resource/{resource}", func(e *core.RequestEvent) error {
+		handleJSON(r, "/.well-known/oauth-protected-resource/{resource}", func(e *core.RequestEvent) (interface{}, error) {
 			oauth2ProtectedResourceMetadataMu.RLock()
 			defer oauth2ProtectedResourceMetadataMu.RUnlock()
 
@@ -433,16 +436,16 @@ func bindOAuth2WellKnownHandlers(cfg *Config, r *router.Router[*core.RequestEven
 			key := strings.Trim(e.Request.PathValue("resource"), "/")
 
 			if md, ok := oauth2ProtectedResourceMetadata[key]; ok {
-				return handleJSON(md)(e)
+				return md, nil
 			} else {
-				return e.NotFoundError("", nil)
+				return nil, e.NotFoundError("", nil)
 			}
 		})
 	}
 }
 
-func handleJSON(data any) func(e *core.RequestEvent) error {
-	return func(e *core.RequestEvent) error {
+func handleJSON(r *router.Router[*core.RequestEvent], path string, getter func(e *core.RequestEvent) (interface{}, error)) {
+	h := func(e *core.RequestEvent) error {
 		r := e.Request
 		w := e.Response
 		// Set CORS headers for cross-origin client discovery.
@@ -458,10 +461,20 @@ func handleJSON(data any) func(e *core.RequestEvent) error {
 		if r.Method != http.MethodGet {
 			return e.Error(http.StatusMethodNotAllowed, "", nil)
 		}
+		data, err := getter(e)
+		if err != nil {
+			if errors.Is(err, &router.ApiError{}) {
+				return err
+			}
+			return e.InternalServerError("", err)
+		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(data); err != nil {
 			return e.InternalServerError("", err)
 		}
 		return nil
 	}
+
+	r.OPTIONS(path, h)
+	r.GET(path, h)
 }
