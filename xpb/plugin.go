@@ -59,7 +59,7 @@ func (p *Plugin) Validate() error {
 
 // Name implements xpb.Plugin.
 func (p *Plugin) Name() string {
-	return "pocketbase-ext-oauth2"
+	return "pocketbase_ext_oauth2"
 }
 
 // Version implements xpb.Plugin.

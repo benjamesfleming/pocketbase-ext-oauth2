@@ -22,11 +22,44 @@ Turn any [PocketBase](https://pocketbase.io) instance into a fully compliant **O
 
 ### Installation
 
+**Using Pocket Builds ([xpb](https://docs.pocketbuilds.com/using-the-builder))**
+
+```bash
+xpb build latest --with github.com/benjamesfleming/pocketbase-ext-oauth2/xpb@main
+```
+
+Configuration Options - Plugin configuration can be provided using the pocketbuilds.toml file. The options are as follows:
+
+```toml
+[pocketbase_ext_oauth2]
+# PathPrefix
+# The URL path prefix under which all OAuth2 endpoints will be served under.
+path_prefix = "/oauth2"
+
+# UserCollection
+# The name of the PocketBase collection containing
+# your user records. This collection MUST be an auth
+# collection with at least one auth provider enabled.
+user_collection = "users"
+
+# EnableRFC7591
+# Adds support for Dynamic Client Registration
+enable_rfc7591 = true
+
+# EnableRFC9728
+# Adds support for Protected Resource Metadata
+enable_rfc9728 = true
+
+# Enforce PKCE for all authorization code flows (recommended)
+# Options: "all", "public" (Public clients only), "none"
+enforce_pkce = "none"
+````
+
+**Using Go Plugin System**
+
 ```bash
 go get github.com/benjamesfleming/pocketbase-ext-oauth2
 ```
-
-### Quick Start
 
 ```go
 package main
