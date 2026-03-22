@@ -4,8 +4,8 @@ import (
 	"testing"
 	"time"
 
-	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
+	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/consts"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )

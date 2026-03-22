@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/client"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/client"
 	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
 )

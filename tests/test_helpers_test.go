@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
-	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
+	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/consts"
 	"github.com/ory/fosite"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tests"
