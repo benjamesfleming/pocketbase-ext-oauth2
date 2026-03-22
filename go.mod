@@ -1,4 +1,4 @@
-module github.com/benjamesfleming/pocketbase-ext-oauth2
+module github.com/DragonsWho/pocketbase-ext-oauth2
 
 go 1.25.6
 
