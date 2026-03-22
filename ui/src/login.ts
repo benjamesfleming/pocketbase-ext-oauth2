@@ -152,11 +152,11 @@ Alpine.data<Partial<LoginState>, any>('oauth', () => {
                 return;
 
             } else if (this.params.prompt === "consent") {
+                // Для первого домена — сразу аппрувим, без экрана согласия
                 if (this.state.validAccountsForReq.length === 1) {
                     this.state!.authRecord = pbAuthStore.selectByRecord(this.state.validAccountsForReq[0])?.record || null;
-                    this.page = "consent";
+                    this.handleSuccessfulConsent(); // ← сразу редирект
                 } else {
-                    // TODO/conformance: Check login_hint if provided. If it matches exactly, go to consent, else go to account-selection.
                     this.page = "account-selection";
                 }
             } else if (this.params.prompt === "login") {
