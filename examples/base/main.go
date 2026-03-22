@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
+	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
 	"github.com/pocketbase/pocketbase"
 )
 

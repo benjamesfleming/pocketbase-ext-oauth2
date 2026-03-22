@@ -4,7 +4,7 @@ package oauth2
 // 	"crypto/ed25519"
 // 	"testing"
 
-// 	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
+// 	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
 // 	"github.com/go-jose/go-jose/v3"
 // )
 

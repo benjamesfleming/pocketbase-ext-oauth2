@@ -11,7 +11,7 @@ import (
 	fositeopenid "github.com/ory/fosite/handler/openid"
 	fositepkce "github.com/ory/fosite/handler/pkce"
 
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/consts"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 )

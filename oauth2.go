@@ -17,12 +17,12 @@ import (
 	"github.com/ory/fosite/compose"
 	"github.com/pkg/errors"
 
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
-	_ "github.com/benjamesfleming/pocketbase-ext-oauth2/migrations"
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/openid"
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/rfc8414"
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/rfc9728"
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/ui"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/consts"
+	_ "github.com/DragonsWho/pocketbase-ext-oauth2/migrations"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/openid"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/rfc8414"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/rfc9728"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/ui"
 	"github.com/pocketbase/dbx"
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbase/pocketbase/tools/router"
@@ -273,10 +273,41 @@ func Register(app core.App, config *Config) error {
 				slog.Any("client_name", e.Record.GetString("client_name")),
 			)
 
-			h, _ := GetOAuth2Config().GetSecretsHasher(context.Background()).Hash(
+			h, err := GetOAuth2Config().GetSecretsHasher(context.Background()).Hash(
 				e.Context,
 				[]byte(e.Record.GetString("client_secret")),
 			)
+			if err != nil {
+				e.App.Logger().Error(
+					"[Plugin/OAuth2] Failed to hash client secret",
+					slog.Any("client_id", e.Record.GetString("client_id")),
+					slog.Any("error", err),
+				)
+				return fmt.Errorf("failed to hash client secret: %w", err)
+			}
+			e.Record.Set("client_secret", string(h))
+			return e.Next()
+		})
+
+	app.OnRecordUpdate(consts.ClientCollectionName).
+		BindFunc(func(e *core.RecordEvent) error {
+			newSecret := e.Record.GetString("client_secret")
+			oldSecret := e.Record.Original().GetString("client_secret")
+			if newSecret == oldSecret {
+				return e.Next()
+			}
+			h, err := GetOAuth2Config().GetSecretsHasher(context.Background()).Hash(
+				e.Context,
+				[]byte(newSecret),
+			)
+			if err != nil {
+				e.App.Logger().Error(
+					"[Plugin/OAuth2] Failed to hash client secret on update",
+					slog.Any("client_id", e.Record.GetString("client_id")),
+					slog.Any("error", err),
+				)
+				return fmt.Errorf("failed to hash client secret: %w", err)
+			}
 			e.Record.Set("client_secret", string(h))
 			return e.Next()
 		})
@@ -390,8 +421,8 @@ func bindOAuth2Handlers(cfg *Config, r *router.Router[*core.RequestEvent]) {
 	uiHandler := func(e *core.RequestEvent) error {
 		return e.FileFS(ui.DistDirFS, "login.html")
 	}
-	r.GET("/oauth2/login", uiHandler)
-	r.POST("/oauth2/login", uiHandler)
+	r.GET(cfg.PathPrefix+"/login", uiHandler)
+	r.POST(cfg.PathPrefix+"/login", uiHandler)
 }
 
 func bindOAuth2WellKnownHandlers(cfg *Config, r *router.Router[*core.RequestEvent]) {

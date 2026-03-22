@@ -1,7 +1,7 @@
 package migrations
 
 import (
-	"github.com/benjamesfleming/pocketbase-ext-oauth2/consts"
+	"github.com/DragonsWho/pocketbase-ext-oauth2/consts"
 	"github.com/pocketbase/pocketbase/core"
 )
 

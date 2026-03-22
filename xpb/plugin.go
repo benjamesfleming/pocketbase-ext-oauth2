@@ -8,7 +8,7 @@ import (
 	"github.com/pocketbase/pocketbase/core"
 	"github.com/pocketbuilds/xpb"
 
-	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
+	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
 )
 
 // This variable will automatically be set at build time by xpb

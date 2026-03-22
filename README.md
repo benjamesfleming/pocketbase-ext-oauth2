@@ -25,7 +25,7 @@ Turn any [PocketBase](https://pocketbase.io) instance into a fully compliant **O
 **Using Pocket Builds ([xpb](https://docs.pocketbuilds.com/using-the-builder))**
 
 ```bash
-xpb build latest --with github.com/benjamesfleming/pocketbase-ext-oauth2/xpb@main
+xpb build latest --with github.com/DragonsWho/pocketbase-ext-oauth2/xpb@main
 ```
 
 Configuration Options - Plugin configuration can be provided using the pocketbuilds.toml file. The options are as follows:
@@ -58,7 +58,7 @@ enforce_pkce = "none"
 **Using Go Plugin System**
 
 ```bash
-go get github.com/benjamesfleming/pocketbase-ext-oauth2
+go get github.com/DragonsWho/pocketbase-ext-oauth2
 ```
 
 ```go
@@ -69,7 +69,7 @@ import (
 	"os"
 	"time"
 
-	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
+	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
 	"github.com/pocketbase/pocketbase"
 )
 

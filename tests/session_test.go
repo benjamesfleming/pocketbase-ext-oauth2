@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	oauth2 "github.com/benjamesfleming/pocketbase-ext-oauth2"
+	oauth2 "github.com/DragonsWho/pocketbase-ext-oauth2"
 	fositeopenid "github.com/ory/fosite/handler/openid"
 	"github.com/ory/fosite/token/jwt"
 )
